@@ -47,6 +47,43 @@ Copy `checkpoints/full/` back for local prediction. It contains weights,
 tokenizer, encoder configuration, temperatures, source revisions, data manifest,
 and training history. Prediction does not need the original model download.
 
+### Windows (PowerShell, NVIDIA GPU)
+
+Native Windows can invoke the Python CLI directly, without Make or WSL.
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/) if needed:
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+Reopen PowerShell after installation, open the project folder, then run:
+
+```powershell
+uv venv --python 3.11 .venv
+uv pip install --python .venv\Scripts\python.exe --torch-backend=auto -e .
+
+# Must print True before proceeding with CUDA training.
+.\.venv\Scripts\python.exe -c "import torch; print(torch.cuda.is_available())"
+
+.\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -m jevlet.cli smoke
+.\.venv\Scripts\python.exe -m jevlet.cli train --device cuda
+.\.venv\Scripts\python.exe -m jevlet.cli eval --device cuda
+```
+
+For the research suite:
+
+```powershell
+.\.venv\Scripts\python.exe -m jevlet.cli baselines --device cuda
+.\.venv\Scripts\python.exe -m jevlet.cli ablate --device cuda
+.\.venv\Scripts\python.exe -m jevlet.cli report
+```
+
+No environment activation is required. uv can download Python 3.11 when it is
+missing. CUDA requires a supported NVIDIA GPU and driver; an AMD/Intel GPU needs
+a different training setup. Native Windows execution has not been tested in
+this workspace; the pipeline checks were performed on Linux CPU.
+
 ## Local typed prediction
 
 ```sh

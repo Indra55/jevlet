@@ -32,12 +32,13 @@ def generate_report():
         markdown.append("| not run | — | — | — | — | — | — | — |")
     readme = ROOT / "README.md"
     if readme.exists():
-        text = readme.read_text()
+        text = readme.read_text(encoding="utf-8")
         start, end = "<!-- RESULTS:START -->", "<!-- RESULTS:END -->"
         if start in text and end in text:
             before, remaining = text.split(start, 1)
             _, after = remaining.split(end, 1)
-            readme.write_text(before + start + "\n\n" + "\n".join(markdown) + "\n\n" + end + after)
+            readme.write_text(before + start + "\n\n" + "\n".join(markdown) + "\n\n" + end + after,
+                              encoding="utf-8")
     generated = ROOT / "paper/generated"
     generated.mkdir(parents=True, exist_ok=True)
     table = ["\\begin{table*}[t]", "\\centering", "\\scriptsize",
