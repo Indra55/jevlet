@@ -1,0 +1,8 @@
+{
+  "text": "I was charged twice for my card payment.",
+  "questions": [
+    {"id": "intent", "type": "choice", "text": "What is the customer's intent?", "options": ["card arrival", "transaction charged twice", "card payment fee charged"]},
+    {"id": "duplicate", "type": "yesno", "text": "Is this about transaction charged twice?"},
+    {"id": "arrival", "type": "yesno", "text": "Is this about card arrival?"}
+  ]
+}

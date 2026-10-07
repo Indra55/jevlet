@@ -1,0 +1,45 @@
+model: distilbert/distilbert-base-uncased
+model_revision: main
+seed: 42
+max_length: 256
+device: auto
+cpu_threads: 4
+banking_dataset: legacy-datasets/banking77
+banking_revision: main
+sst_dataset: SetFit/sst5
+sst_revision: main
+options_min: 2
+options_max: 10
+train:
+  epochs: 5
+  batch_size: 8
+  accumulation: 2
+  lr: 0.00003
+  weight_decay: 0.01
+  warmup: 0.1
+  patience: 2
+  brier_weight: 0.5
+  mixed_precision: true
+eval:
+  batch_size: 32
+  ece_bins: 15
+  latency_requests: 32
+  latency_warmup: 5
+  latency_repeats: 20
+  flan_limit: 256
+  flan_model: google/flan-t5-base
+  flan_revision: main
+smoke:
+  max_length: 128
+  options_max: 3
+  train_per_dataset: 24
+  eval_per_dataset: 12
+  train:
+    epochs: 1
+    batch_size: 2
+    accumulation: 1
+  eval:
+    batch_size: 4
+    latency_requests: 4
+    latency_warmup: 1
+    latency_repeats: 2

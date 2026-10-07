@@ -1,0 +1,142 @@
+\documentclass[conference]{IEEEtran}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{url}
+\title{Jevlet: Small Encoders for Parallel Typed Decisions over Text}
+\author{\IEEEauthorblockN{Author name to be supplied}
+\IEEEauthorblockA{Institution to be supplied}}
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Jevlet studies a compact encoder that returns typed probability distributions
+instead of generated text. A shared DistilBERT backbone answers intent choices,
+ordinal sentiment questions, and binary intent predicates. Multiple questions
+can occupy a single sequence with shared context. Supervised training uses only
+public human-labeled datasets, with a Brier term and held-out temperature
+scaling. The experimental pipeline measures task performance, calibration,
+selective prediction, and inference cost against sparse classifiers, separate
+encoders, and a local instruction-tuned language model. This manuscript is an
+experiment scaffold; findings are reported only after full runs populate the
+generated tables.
+\end{abstract}
+
+\section{Introduction}
+Applications frequently need a bounded decision, such as an intent, a rating,
+or a predicate, rather than a paragraph. TypeSafe's Jev describes a typed,
+probabilistic interface with parallel outputs \cite{jev}. OpenAI's Decisions
+API similarly evaluates questions against shared evidence \cite{openai_decisions}.
+Jevlet investigates a narrower supervised setting: can a small pretrained
+encoder serve several typed tasks while preserving useful confidence and
+reducing repeated encoding? No claim of reproducing proprietary model
+architectures, broad reasoning capabilities, or training methods is made.
+
+\section{Related Work}
+BERT introduced bidirectional pretrained text representations \cite{bert}.
+DistilBERT reduces the encoder's size through knowledge distillation
+\cite{distilbert}. Laya provides an open implementation of marker-based typed
+decision scoring \cite{laya}. Its inspected runtime constructs separate input
+rows for questions, whereas Jevlet packs several questions with one context
+into a single row. This design is an engineering comparison, not a claim that
+typed classification or question packing is novel.
+CORAL addresses rank consistency in ordinal prediction \cite{coral}.
+Temperature scaling is a low-parameter post-hoc calibration method
+\cite{guo2017}. Brier scoring measures probability error \cite{brier}.
+FLAN-T5 provides an instruction-tuned generative comparator \cite{flan}.
+
+\section{Method}
+Inputs use question markers $[Q]$ and option markers $[OPT]$, followed by a
+separator and shared context. Questions and option text are preserved; context
+is truncated to the remaining token budget. A linear scorer reads choice
+option states. A binary head reads the corresponding question state. The
+ordinal head uses a shared scalar $s$ and ordered thresholds $b_1<\cdots<b_4$:
+\begin{equation}
+q_k=P(Y>k)=\sigma(s-b_k),\quad k=1,\ldots,4.
+\end{equation}
+Five class probabilities are $1-q_1$, $q_1-q_2$, $q_2-q_3$, $q_3-q_4$, and
+$q_4$. Ordered thresholds ensure nonnegative probabilities. Training combines
+cross-entropy or binary cross-entropy with $0.5\sum_j(p_j-y_j)^2$, averaging
+within each represented task before averaging tasks.
+
+Each head receives a positive temperature fitted on a calibration split by
+minimizing negative log-likelihood. The ordinal head scales all cumulative
+logits together. Confidence is the largest class probability, rather than an
+entropy-derived proxy. Calibration is evaluated empirically on held-out data;
+neither the loss nor temperature scaling establishes a universal guarantee.
+
+\section{Experiments}
+BANKING77 \cite{banking77} supplies intent classification and derived balanced
+binary questions. Each choice has 2--10 randomly sampled candidates including
+the gold intent. Both true and false queried intents occur among packed
+candidates, preventing a simple presence shortcut. Binary targets are sampled
+independently; a triple need not contain one true and one false predicate.
+SST-5 \cite{sst} supplies sentiment levels 1--5. The banking triple is one
+choice and two predicates; sentiment is evaluated on reviews separately.
+
+Source contexts are split before question construction. Normalized duplicate
+texts are removed across partitions, with test taking precedence. Banking
+training data is divided 80/10/10 into training, validation, and calibration.
+SST development data is divided between validation and calibration; original
+test partitions are reserved for evaluation. All derived questions for a
+context remain together. Training candidates vary deterministically by epoch;
+evaluation requests are frozen by seed.
+
+Baselines are TF-IDF logistic regression, three separately fine-tuned task
+encoders, and FLAN-T5-base scoring finite answer strings by mean token
+log-likelihood. The separate encoders use standalone task supervision on the
+same source splits; supervision counts can differ from the joint model's
+random packing mix. FLAN is evaluated on a fixed source subset, with Jevlet
+evaluated on that identical subset for a matched comparison.
+The default is one seed; an explicit three-seed mode reports individual runs
+and aggregate statistics when available.
+
+Report accuracy and macro-F1 for intent, accuracy and MAE for ordinal
+sentiment, and accuracy and AUROC for predicates. Calibration measures are
+15-bin expected calibration error, NLL, and summed multiclass Brier error.
+Score MAE uses the discrete level; expected-score MAE is reported separately.
+Selective prediction uses confidence thresholds, grouping ties. Sentiment
+risk is absolute ordinal error normalized by four.
+
+Latency tests compare packed encoding, sequential single-question passes,
+and separate question sequences in one batch, retaining identical context
+tokens. CPU and available CUDA devices are measured at request batch sizes
+one and 32, with warm-up and synchronization. Forward-only time and packing
+plus forward time are distinguished. Loading, network, and JSON serialization
+are excluded. Batch-32 milliseconds per request measure amortized throughput.
+Ablations remove Brier loss, disable calibration, vary candidate counts, and
+compare packed and single-question inference of the same checkpoint.
+
+\section{Results}
+\IfFileExists{generated/results.tex}{\input{generated/results.tex}}{
+Full experiments have not been run.}
+\IfFileExists{generated/latency.tex}{\input{generated/latency.tex}}{}
+\IfFileExists{generated/summary.tex}{\input{generated/summary.tex}}{}
+\IfFileExists{generated/figures.tex}{\input{generated/figures.tex}}{}
+Smoke-run figures and metrics are excluded. Generated measurements should be
+used to assess whether packing improves the quality--latency tradeoff and
+whether calibration remains useful for each candidate count. No result
+numbers, speedup factors, or performance conclusions are supplied in advance.
+
+\section{Limitations}
+Jevlet is an English task-specific supervised model. The interface does not
+establish arbitrary question following, unseen intent transfer, new scoring
+rubrics, or general decision-making ability. Candidate sets contain the gold
+label, so intent results are shortlist results rather than all-77 detection.
+Balanced binary training does not represent natural intent-query prevalence.
+Packing correlated questions may permit information sharing; standalone
+evaluation is required to characterize its impact. Calibration can shift with
+question wording, option count, packing, and data distribution. Temperature
+fitting on one distribution may not transfer. Long contexts lose evidence,
+and typed output correctness does not imply semantic answer correctness.
+Single-seed comparisons and capped FLAN subsets limit statistical conclusions.
+
+\section{Conclusion}
+Jevlet supplies a reproducible, modest-compute pipeline for investigating
+parallel typed decisions with a small encoder. Its contribution is the
+controlled evaluation of shared-sequence inference, supervised task quality,
+and probability calibration. Conclusions about performance must follow the
+completed experiment artifacts.
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+\end{document}

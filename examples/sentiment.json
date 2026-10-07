@@ -1,0 +1,6 @@
+{
+  "text": "A warm, funny film with excellent performances.",
+  "questions": [
+    {"id": "sentiment", "type": "score", "text": "How positive is this review?"}
+  ]
+}

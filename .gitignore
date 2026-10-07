@@ -1,0 +1,15 @@
+.venv/
+.cache/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+checkpoints/
+results/
+paper/generated/
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/*.bbl
+paper/*.blg
+paper/*.pdf
+

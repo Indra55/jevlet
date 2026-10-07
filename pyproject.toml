@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jevlet"
+version = "0.1.0"
+description = "A small encoder for parallel typed decisions over text"
+requires-python = ">=3.10"
+dependencies = [
+  "torch>=2.3,<3", "transformers>=4.48,<5", "datasets>=3,<5",
+  "scikit-learn>=1.4,<2", "matplotlib>=3.8,<4", "numpy>=1.26,<3",
+  "PyYAML>=6,<7", "safetensors>=0.4", "sentencepiece>=0.2", "pytest>=8,<10",
+]
+
+[project.scripts]
+jevlet = "jevlet.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
