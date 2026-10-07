@@ -25,7 +25,7 @@ The smoke run uses pretrained DistilBERT and small real Banking77/SST-5 subsets.
 Its five-minute CPU target excludes first-time installation and downloads.
 Smoke results demonstrate pipeline execution, not useful model accuracy.
 
-## Train on your friend's GPU
+## Train on your GPU
 
 Copy this repository to the GPU machine, then:
 
