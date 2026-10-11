@@ -26,9 +26,9 @@ def ece(confidence, correct, bins=15):
                      correct[indices == b].mean()) for b in range(bins) if (indices == b).any()))
 
 
-def distribution(head, logits, temperature=1.0):
+def distribution(head, logits, temperature=1.0, score_mode="ordinal"):
     z = logits / temperature
-    if head == "choice":
+    if head == "choice" or (head == "score" and score_mode == "categorical"):
         return z.softmax(-1)
     if head == "score":
         return ordinal_probs(z)
@@ -36,7 +36,7 @@ def distribution(head, logits, temperature=1.0):
     return torch.stack((1 - yes, yes), dim=-1)
 
 
-def fit_temperatures(records):
+def fit_temperatures(records, device="cpu"):
     temperatures, details = {}, {}
     for head in HEADS:
         selected = [r for r in records if r["type"] == head]
@@ -52,13 +52,15 @@ def fit_temperatures(records):
                 z[i, :len(r["logits"])] = torch.tensor(r["logits"])
         else:
             z = torch.tensor([r["logits"] for r in selected], dtype=torch.float32)
-        log_t = torch.zeros((), requires_grad=True)
+        z, targets = z.to(device), targets.to(device)
+        score_mode = selected[0].get("score_mode", "ordinal")
+        log_t = torch.zeros((), device=device, requires_grad=True)
         optimizer = torch.optim.LBFGS([log_t], lr=0.2, max_iter=60, line_search_fn="strong_wolfe")
 
         def objective():
             # Bound the search for numerical stability; record any boundary solution.
-            p = distribution(head, z, log_t.clamp(-4, 4).exp())
-            return -p[torch.arange(len(selected)), targets].clamp_min(1e-12).log().mean()
+            p = distribution(head, z, log_t.clamp(-4, 4).exp(), score_mode)
+            return -p[torch.arange(len(selected), device=device), targets].clamp_min(1e-12).log().mean()
 
         before = float(objective().detach())
 
@@ -88,7 +90,8 @@ def score_records(records, temperatures=None, bins=15, intent_count=77):
         rows = [r for r in records if r["type"] == head]
         if not rows:
             continue
-        probs = [distribution(head, torch.tensor(r["logits"]), temperatures[head]).numpy() for r in rows]
+        probs = [distribution(head, torch.tensor(r["logits"]), temperatures[head],
+                              r.get("score_mode", "ordinal")).numpy() for r in rows]
         predicted = np.array([p.argmax() for p in probs])
         truth = np.array([r["target"] for r in rows])
         confidence = np.array([p.max() for p in probs])
@@ -103,6 +106,8 @@ def score_records(records, temperatures=None, bins=15, intent_count=77):
             result["macro_f1"] = float(f1_score(gold, pred_labels, labels=list(range(intent_count)),
                                                average="macro", zero_division=0))
         if head == "score":
+            result["macro_f1"] = float(f1_score(truth, predicted, labels=list(range(5)),
+                                               average="macro", zero_division=0))
             result["mae"] = float(np.abs(predicted - truth).mean())
             expected = np.array([np.dot(np.arange(5), p) for p in probs])
             result["expected_score_mae"] = float(np.abs(expected - truth).mean())

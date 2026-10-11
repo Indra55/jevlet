@@ -121,6 +121,34 @@ transfer, arbitrary scoring rubrics, or reliable out-of-domain confidence.
 
 ## Research workflow
 
+### CUDA-only classifier comparison
+
+After a full run has produced `checkpoints/full/data.json` and `training.json`,
+the dedicated comparison suite freezes those source splits and retrains two
+Jevlet sentiment variants plus five external classifier configurations:
+
+```powershell
+python -m pytest tests/test_gpu_comparison.py -q
+python -m jevlet.gpu_compare
+```
+
+The suite requires CUDA and never falls back to CPU model fitting or inference.
+CPU tokenization, TF-IDF extraction, and metric summaries remain necessary.
+It uses seed 42, validation-based checkpoint/variant selection, and independent
+calibration data. Linear classifiers use custom PyTorch logistic or squared-hinge
+objectives on CUDA; transformer comparators encode context text and classify
+known label IDs. These differ from Jevlet's marker-conditioned interface.
+
+New artifacts live in `checkpoints/gpu_comparison/`, with a ten-second device
+monitor in `vram.jsonl`, per-model progress, predictions, and the consolidated
+`results/gpu_comparison_summary.json`. Completed models are reused when the
+command is rerun. A smaller selection can be run with `--models`, for example
+`--models jevlet_softmax bert_classifier`.
+
+The final manuscript is regenerated from all seven completed comparisons with
+`python scripts/rewrite_comparison_paper.py`. It is self-contained LaTeX and
+includes single-seed and previously inspected-test-set limitations.
+
 All settings are in `config.yaml`; command flags select run, device, smoke,
 baseline, and seeds. Explicit stages avoid launching expensive experiments
 accidentally:
@@ -200,36 +228,12 @@ and AUROC to yes/no. **Smoke rows are pipeline checks only.**
 
 | Run | Model | Head | Accuracy | F1 / MAE / AUROC | ECE | NLL | Brier |
 |---|---|---|---:|---:|---:|---:|---:|
-| smoke | flan_subset | choice | 0.6667 | 0.0909 | 0.1766 | 0.7198 | 0.4636 |
-| smoke | flan_subset | score | 0.5833 | 0.7500 | 0.2809 | 1.0740 | 0.5761 |
-| smoke | flan_subset | yesno | 0.7500 | 0.8819 | 0.1967 | 0.6003 | 0.3842 |
+| full | jevlet | choice | 0.9701 | 0.9700 | 0.0063 | 0.0923 | 0.0459 |
+| full | jevlet | score | 0.3520 | 0.8593 | 0.2122 | 1.4426 | 0.7502 |
+| full | jevlet | yesno | 0.9799 | 0.9969 | 0.0089 | 0.0686 | 0.0333 |
 | smoke | jevlet | choice | 0.1667 | 0.0260 | 0.3061 | 0.7614 | 0.5284 |
 | smoke | jevlet | score | 0.0000 | 1.5000 | 0.2521 | 1.6476 | 0.8188 |
 | smoke | jevlet | yesno | 0.5000 | 0.4028 | 0.0034 | 0.6932 | 0.5001 |
-| smoke | jevlet_flan_subset | choice | 0.1667 | 0.0260 | 0.3061 | 0.7614 | 0.5284 |
-| smoke | jevlet_flan_subset | score | 0.0000 | 1.5000 | 0.2521 | 1.6476 | 0.8188 |
-| smoke | jevlet_flan_subset | yesno | 0.5000 | 0.4028 | 0.0034 | 0.6932 | 0.5001 |
-| smoke | no_brier | choice | 0.1667 | 0.0260 | 0.3071 | 0.7625 | 0.5295 |
-| smoke | no_brier | score | 0.0000 | 1.5000 | 0.2535 | 1.6511 | 0.8204 |
-| smoke | no_brier | yesno | 0.5000 | 0.4028 | 0.0034 | 0.6932 | 0.5001 |
-| smoke | options10 | choice | 0.0833 | 0.0130 | 0.0169 | 2.3022 | 0.8999 |
-| smoke | options10 | score | 0.0000 | 1.5000 | 0.2521 | 1.6476 | 0.8188 |
-| smoke | options10 | yesno | 0.5417 | 0.4825 | 0.0384 | 0.6926 | 0.4995 |
-| smoke | options2 | choice | 0.6667 | 0.0952 | 0.1655 | 0.6920 | 0.4989 |
-| smoke | options2 | score | 0.0000 | 1.5000 | 0.2521 | 1.6476 | 0.8188 |
-| smoke | options2 | yesno | 0.3750 | 0.4370 | 0.1284 | 0.6949 | 0.5018 |
-| smoke | options5 | choice | 0.0833 | 0.0130 | 0.1171 | 1.6092 | 0.7999 |
-| smoke | options5 | score | 0.0000 | 1.5000 | 0.2521 | 1.6476 | 0.8188 |
-| smoke | options5 | yesno | 0.4583 | 0.5524 | 0.0450 | 0.6937 | 0.5005 |
-| smoke | separate | choice | 0.2500 | 0.0303 | 0.2784 | 0.7616 | 0.5288 |
-| smoke | separate | score | 0.0000 | 1.5000 | 0.2489 | 1.6486 | 0.8183 |
-| smoke | separate | yesno | 0.5000 | 0.6389 | 0.0474 | 0.6964 | 0.5033 |
-| smoke | single_question | choice | 0.2500 | 0.0346 | 0.2783 | 0.7614 | 0.5284 |
-| smoke | single_question | score | 0.0000 | 1.5000 | 0.2521 | 1.6476 | 0.8188 |
-| smoke | single_question | yesno | 0.5000 | 0.5833 | 0.0046 | 0.6932 | 0.5001 |
-| smoke | tfidf | choice | 0.3333 | 0.0476 | 0.2503 | 0.7482 | 0.5154 |
-| smoke | tfidf | score | 0.5000 | 1.2500 | 0.2495 | 1.5311 | 0.7695 |
-| smoke | tfidf | yesno | 0.5417 | 0.5486 | 0.0407 | 0.6923 | 0.4992 |
 
 <!-- RESULTS:END -->
 

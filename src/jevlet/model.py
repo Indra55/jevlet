@@ -40,12 +40,15 @@ def masked_choice_probs(logits, mask, temperature=1.0):
 
 
 class Jevlet(nn.Module):
-    def __init__(self, encoder):
+    def __init__(self, encoder, score_mode="ordinal"):
         super().__init__()
         self.encoder = encoder
         size = encoder.config.hidden_size
         self.choice_head = nn.Linear(size, 1)
-        self.score_head = OrdinalHead(size)
+        if score_mode not in ("ordinal", "categorical"):
+            raise ValueError("score_mode must be ordinal or categorical")
+        self.score_mode = score_mode
+        self.score_head = OrdinalHead(size) if score_mode == "ordinal" else nn.Linear(size, 5)
         self.yesno_head = nn.Linear(size, 1)
         self.register_buffer("temperatures", torch.ones(3))
         self.tokenizer = None
@@ -57,7 +60,7 @@ class Jevlet(nn.Module):
         tokenizer.add_special_tokens({"additional_special_tokens": list(TOKENS)})
         encoder = AutoModel.from_pretrained(cfg["model"], revision=cfg["model_revision"])
         encoder.resize_token_embeddings(len(tokenizer))
-        model = cls(encoder)
+        model = cls(encoder, cfg.get("score_mode", "ordinal"))
         model.tokenizer, model.max_length = tokenizer, cfg["max_length"]
         model.source_revision = getattr(encoder.config, "_commit_hash", None)
         return model
@@ -77,7 +80,8 @@ class Jevlet(nn.Module):
         temp = self.temperatures if calibrated else torch.ones_like(self.temperatures)
         yes = (logits["yesno"] / temp[2]).sigmoid()
         return {"choice": masked_choice_probs(logits["choice"], mask, temp[0]),
-                "score": ordinal_probs(logits["score"] / temp[1]),
+                "score": (ordinal_probs(logits["score"] / temp[1]) if self.score_mode == "ordinal"
+                          else (logits["score"] / temp[1]).softmax(-1)),
                 "yesno": torch.stack((1 - yes, yes), dim=-1)}
 
     def save(self, directory):
@@ -88,13 +92,15 @@ class Jevlet(nn.Module):
         self.encoder.config.save_pretrained(directory / "encoder")
         self.tokenizer.save_pretrained(directory / "tokenizer")
         write_json(directory / "jevlet.json", {"max_length": self.max_length,
-                   "source_revision": self.source_revision, "heads": list(HEADS), "format_version": 1})
+                   "source_revision": self.source_revision, "heads": list(HEADS), "format_version": 1,
+                   "score_mode": self.score_mode})
 
     @classmethod
     def load(cls, checkpoint, device="cpu"):
         directory = Path(checkpoint)
         spec = json.loads((directory / "jevlet.json").read_text())
-        model = cls(AutoModel.from_config(AutoConfig.from_pretrained(directory / "encoder")))
+        model = cls(AutoModel.from_config(AutoConfig.from_pretrained(directory / "encoder")),
+                    spec.get("score_mode", "ordinal"))
         model.tokenizer = AutoTokenizer.from_pretrained(directory / "tokenizer")
         model.max_length, model.source_revision = spec["max_length"], spec["source_revision"]
         model.load_state_dict(load_file(str(directory / "model.safetensors")))
@@ -139,6 +145,8 @@ def training_loss(model, logits, batch, brier_weight):
             if head == "choice":
                 k = len(question["options"])
                 z, p = z[:k], p[:k]
+                base = F.cross_entropy(z.unsqueeze(0), z.new_tensor([target], dtype=torch.long))
+            elif head == "score" and model.score_mode == "categorical":
                 base = F.cross_entropy(z.unsqueeze(0), z.new_tensor([target], dtype=torch.long))
             elif head == "score":
                 cumulative_target = (torch.arange(4, device=z.device) < target).float()

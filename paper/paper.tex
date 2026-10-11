@@ -1,142 +1,216 @@
 \documentclass[conference]{IEEEtran}
-\usepackage{graphicx}
-\usepackage{amsmath}
-\usepackage{url}
-\title{Jevlet: Small Encoders for Parallel Typed Decisions over Text}
-\author{\IEEEauthorblockN{Author name to be supplied}
-\IEEEauthorblockA{Institution to be supplied}}
+\usepackage{mathptmx}
+\usepackage{amsmath,amssymb,booktabs,cite,url}
+\usepackage[hidelinks]{hyperref}
+\title{Jevlet: Comparing Typed Shared-Encoder Decisions with Classical and Transformer Text Classifiers}
+\author{
+\IEEEauthorblockN{\normalfont Hitanshu Gala}
+\IEEEauthorblockA{\textit{Dept. of Information Technology}\\
+\textit{Dwarkadas J. Sanghvi College of Engineering}\\
+Mumbai, India}
+\and
+\IEEEauthorblockN{\normalfont Jay Dalvi}
+\IEEEauthorblockA{\textit{Dept. of Information Technology}\\
+\textit{Dwarkadas J. Sanghvi College of Engineering}\\
+Mumbai, India}
+}
+
 \begin{document}
 \maketitle
-
 \begin{abstract}
-Jevlet studies a compact encoder that returns typed probability distributions
-instead of generated text. A shared DistilBERT backbone answers intent choices,
-ordinal sentiment questions, and binary intent predicates. Multiple questions
-can occupy a single sequence with shared context. Supervised training uses only
-public human-labeled datasets, with a Brier term and held-out temperature
-scaling. The experimental pipeline measures task performance, calibration,
-selective prediction, and inference cost against sparse classifiers, separate
-encoders, and a local instruction-tuned language model. This manuscript is an
-experiment scaffold; findings are reported only after full runs populate the
-generated tables.
+\bfseries
+Text-processing applications often need an intent, a sentiment level, or a boolean rather than a generated response. Jevlet answers these bounded questions using a shared encoder and explicit probability outputs. This study retrains its original ordinal sentiment variant and a five-class softmax variant, and compares them with GPU-trained TF-IDF linear classifiers and conventional DistilBERT, BERT, and RoBERTa classifiers. All systems use the same BANKING77 and SST-5 source partitions and the same derived evaluation questions. Variant selection uses validation sentiment accuracy, while temperatures are fitted on a separate calibration partition. The selected Jevlet variant attains 95.45\% banking shortlist accuracy, 52.22\% five-level sentiment accuracy, and 96.83\% binary intent accuracy. Replacing the ordinal sentiment head changes test accuracy by +17.01 percentage points. The highest sentiment accuracy in this run is 54.12\%, obtained by RoBERTa-base classifier. We also report calibration, synchronized GPU inference time, training cost, and peak allocated memory. These single-seed measurements describe a practical quality--cost tradeoff rather than establishing a universal ranking of model families.
 \end{abstract}
+\begin{IEEEkeywords}
+\bfseries
+text classification, multi-task learning, sentiment analysis, DistilBERT, probability calibration, GPU inference
+\end{IEEEkeywords}
 
 \section{Introduction}
-Applications frequently need a bounded decision, such as an intent, a rating,
-or a predicate, rather than a paragraph. TypeSafe's Jev describes a typed,
-probabilistic interface with parallel outputs \cite{jev}. OpenAI's Decisions
-API similarly evaluates questions against shared evidence \cite{openai_decisions}.
-Jevlet investigates a narrower supervised setting: can a small pretrained
-encoder serve several typed tasks while preserving useful confidence and
-reducing repeated encoding? No claim of reproducing proprietary model
-architectures, broad reasoning capabilities, or training methods is made.
+A support application may need to choose a banking intent and answer two follow-up predicates about the same message. A review-analysis application may need a sentiment level from one to five. Each decision has a small answer space, so a classifier can expose the decision directly without requiring an application to parse generated prose. Probability outputs also make it possible to evaluate confidence separately from answer correctness.
+
+Jevlet implements this interface with a shared DistilBERT encoder, question and option markers, and three typed heads. Several questions can occupy one sequence with a common text context. However, a useful interface is not itself evidence of better classification. A conventional text classifier can also reuse a context representation and answer known label queries efficiently. The relevant question is therefore how Jevlet compares with simpler linear classifiers and other pretrained encoders on the same tasks.
+
+An earlier exploratory run exposed a weakness in the ordinal sentiment head: its discrete predictions omitted intermediate levels. This motivated a five-class alternative. We retrain both variants from the pretrained encoder, select between them on validation data, and compare their quality and computational cost with five external classifier configurations. The contribution is a reproducible empirical comparison of typed marker scoring and closed-label context classification, together with a sentiment-head ablation. It is not a claim of a new general-purpose language model or unrestricted question answering.
 
 \section{Related Work}
-BERT introduced bidirectional pretrained text representations \cite{bert}.
-DistilBERT reduces the encoder's size through knowledge distillation
-\cite{distilbert}. Laya provides an open implementation of marker-based typed
-decision scoring \cite{laya}. Its inspected runtime constructs separate input
-rows for questions, whereas Jevlet packs several questions with one context
-into a single row. This design is an engineering comparison, not a claim that
-typed classification or question packing is novel.
-CORAL addresses rank consistency in ordinal prediction \cite{coral}.
-Temperature scaling is a low-parameter post-hoc calibration method
-\cite{guo2017}. Brier scoring measures probability error \cite{brier}.
-FLAN-T5 provides an instruction-tuned generative comparator \cite{flan}.
+BERT uses bidirectional transformer representations that can be fine-tuned for downstream language tasks~\cite{bert}. DistilBERT provides a smaller distilled encoder~\cite{distilbert}. RoBERTa studies changes to BERT pretraining and provides another pretrained representation family~\cite{roberta}. These architectures motivate our transformer comparators, but published benchmark scores are not substituted for measurements on our data.
 
-\section{Method}
-Inputs use question markers $[Q]$ and option markers $[OPT]$, followed by a
-separator and shared context. Questions and option text are preserved; context
-is truncated to the remaining token budget. A linear scorer reads choice
-option states. A binary head reads the corresponding question state. The
-ordinal head uses a shared scalar $s$ and ordered thresholds $b_1<\cdots<b_4$:
+TF-IDF provides a sparse lexical representation that is useful for a lightweight baseline. We pair it with regularized logistic classifiers and linear squared-hinge classifiers inspired by the support-vector-machine framework~\cite{svm}. To satisfy the GPU execution requirement, the learned linear models are optimized in PyTorch. These are explicitly implemented classifier configurations, not claims to reproduce a particular library solver's optimum.
+
+Laya's typed interface and marker scoring informed Jevlet's engineering design~\cite{laya}. Ordered cumulative prediction is motivated by rank-consistent ordinal regression~\cite{coral}. Temperature scaling~\cite{guo} and Brier error~\cite{brier} provide complementary tools for studying probability quality. Their inclusion does not establish calibration outside the evaluated distribution.
+
+\section{Models and Objectives}
+\subsection{Jevlet and the Sentiment Ablation}
+Jevlet encodes a question block followed by the shared context:
 \begin{equation}
-q_k=P(Y>k)=\sigma(s-b_k),\quad k=1,\ldots,4.
+[\mathrm{CLS}]\;B(Q)\;[\mathrm{SEP}]\;x\;[\mathrm{SEP}].
 \end{equation}
-Five class probabilities are $1-q_1$, $q_1-q_2$, $q_2-q_3$, $q_3-q_4$, and
-$q_4$. Ordered thresholds ensure nonnegative probabilities. Training combines
-cross-entropy or binary cross-entropy with $0.5\sum_j(p_j-y_j)^2$, averaging
-within each represented task before averaging tasks.
+Each question begins with a learned \texttt{[Q]} marker, and choice options begin with \texttt{[OPT]}. One encoder pass produces marker representations. A linear scorer reads each option marker for a choice question; a binary scorer reads a question marker for a yes/no question. Choice probabilities are a softmax over the supplied options, while a sigmoid produces the binary probability. Requests contain one to three questions, and choice questions contain two to ten distinct options.
 
-Each head receives a positive temperature fitted on a calibration split by
-minimizing negative log-likelihood. The ordinal head scales all cumulative
-logits together. Confidence is the largest class probability, rather than an
-entropy-derived proxy. Calibration is evaluated empirically on held-out data;
-neither the loss nor temperature scaling establishes a universal guarantee.
+The original sentiment head learns a scalar score $s$ and four ordered thresholds $\beta_1<\cdots<\beta_4$. Softplus increments enforce ordering. With a positive temperature $T_s$,
+\begin{equation}
+u_k=P(Y>k)=\sigma((s-\beta_k)/T_s),
+\quad k=1,\ldots,4.
+\end{equation}
+The class probabilities are $(1-u_1,u_1-u_2,u_2-u_3,u_3-u_4,u_4)$. The most probable class supplies the discrete sentiment level. Because class probabilities are differences of cumulative probabilities, narrow learned threshold spacing can yield poorly represented intermediate classes under this decoder. The ordered model remains a valid distribution, but validity does not guarantee useful class coverage.
 
-\section{Experiments}
-BANKING77 \cite{banking77} supplies intent classification and derived balanced
-binary questions. Each choice has 2--10 randomly sampled candidates including
-the gold intent. Both true and false queried intents occur among packed
-candidates, preventing a simple presence shortcut. Binary targets are sampled
-independently; a triple need not contain one true and one false predicate.
-SST-5 \cite{sst} supplies sentiment levels 1--5. The banking triple is one
-choice and two predicates; sentiment is evaluated on reviews separately.
+The alternative replaces this head with five independent logits,
+\begin{equation}
+\boldsymbol{p}_s=\operatorname{softmax}((W_s h_q+b_s)/T_s).
+\end{equation}
+This directly optimizes five-class discrimination but removes the explicit ordering constraint. Both heads return an expected score $\sum_{j=1}^{5}j p_j$. The choice and binary heads, marker packing, and encoder are otherwise unchanged.
 
-Source contexts are split before question construction. Normalized duplicate
-texts are removed across partitions, with test taking precedence. Banking
-training data is divided 80/10/10 into training, validation, and calibration.
-SST development data is divided between validation and calibration; original
-test partitions are reserved for evaluation. All derived questions for a
-context remain together. Training candidates vary deterministically by epoch;
-evaluation requests are frozen by seed.
+\subsection{Conventional Context Classifiers}
+The DistilBERT, BERT-base, and RoBERTa-base comparators encode the text alone and use its first-token representation with dropout and linear task heads. There are 77 intent logits, five sentiment logits, and 77 binary predicate logits. A supplied shortlist selects the corresponding intent logits before softmax, while a queried intent selects one binary logit. Thus, these comparators answer known label IDs; they do not interpret arbitrary question or option text. They share a context representation across the questions just as a conventional application could.
 
-Baselines are TF-IDF logistic regression, three separately fine-tuned task
-encoders, and FLAN-T5-base scoring finite answer strings by mean token
-log-likelihood. The separate encoders use standalone task supervision on the
-same source splits; supervision counts can differ from the joint model's
-random packing mix. FLAN is evaluated on a fixed source subset, with Jevlet
-evaluated on that identical subset for a matched comparison.
-The default is one seed; an explicit three-seed mode reports individual runs
-and aggregate statistics when available.
+The TF-IDF comparators use word unigrams and bigrams, sublinear term frequency, L2-normalized features, and at most 20,000 features. The vocabulary and document-frequency statistics are fitted only on training contexts. They use the same three output-head dimensions and shortlist/query selection as the transformer classifiers. Only the current minibatch is densified for CUDA matrix operations. Feature extraction is performed on the CPU; fitting and learned-model inference run on CUDA.
 
-Report accuracy and macro-F1 for intent, accuracy and MAE for ordinal
-sentiment, and accuracy and AUROC for predicates. Calibration measures are
-15-bin expected calibration error, NLL, and summed multiclass Brier error.
-Score MAE uses the discrete level; expected-score MAE is reported separately.
-Selective prediction uses confidence thresholds, grouping ties. Sentiment
-risk is absolute ordinal error normalized by four.
+These input designs differ meaningfully: Jevlet reads natural-language questions and candidate labels, whereas the context classifiers use fixed label identities. Transformer comparators have a 256-token context budget; Jevlet shares that budget with its question block. Model-specific tokenization and truncation therefore prevent a claim of identical token-level evidence. The experiment matches source contexts and label decisions, not complete internal computations.
 
-Latency tests compare packed encoding, sequential single-question passes,
-and separate question sequences in one batch, retaining identical context
-tokens. CPU and available CUDA devices are measured at request batch sizes
-one and 32, with warm-up and synchronization. Forward-only time and packing
-plus forward time are distinguished. Loading, network, and JSON serialization
-are excluded. Batch-32 milliseconds per request measure amortized throughput.
-Ablations remove Brier loss, disable calibration, vary candidate counts, and
-compare packed and single-question inference of the same checkpoint.
+\subsection{Loss and Calibration}
+For Jevlet and the neural/logistic comparators, choice uses cross-entropy, binary prediction uses binary cross-entropy, and categorical sentiment uses cross-entropy. Ordinal sentiment uses binary cross-entropy over four cumulative targets. Each question also contributes $0.5\sum_j(p_j-y_j)^2$, where $y_j$ is a one-hot class target. Losses are averaged within each head represented in a batch, then across those heads.
 
-\section{Results}
-\IfFileExists{generated/results.tex}{\input{generated/results.tex}}{
-Full experiments have not been run.}
-\IfFileExists{generated/latency.tex}{\input{generated/latency.tex}}{}
-\IfFileExists{generated/summary.tex}{\input{generated/summary.tex}}{}
-\IfFileExists{generated/figures.tex}{\input{generated/figures.tex}}{}
-Smoke-run figures and metrics are excluded. Generated measurements should be
-used to assess whether packing improves the quality--latency tradeoff and
-whether calibration remains useful for each candidate count. No result
-numbers, speedup factors, or performance conclusions are supplied in advance.
+The SVM configuration uses regularized squared one-vs-rest hinge losses on candidate classes and signed binary margins, without the Brier term. It is trained by minibatch AdamW rather than a dedicated dual solver. Its decision margins are converted to softmax or sigmoid distributions for evaluation. This conversion, followed by calibration, is a modeling choice; raw SVM margins are not intrinsically probabilities.
+
+After checkpoint selection, one positive temperature per head is fitted on the calibration split by minimizing negative log-likelihood (NLL), using L-BFGS on CUDA. Temperatures rescale logits before probability construction. Confidence is the largest class probability. For softmax and binary heads, positive temperature scaling preserves discrete decisions. It can change an ordinal head's most probable level. We report both probability quality and discrete quality rather than assuming that calibration improves every measure.
+
+\section{Experimental Protocol}
+\subsection{Data and Matched Decisions}
+BANKING77 supplies banking intent labels~\cite{banking}; SST-5 supplies five-level review sentiment~\cite{sst}. The retained source partitions are shown in Table~\ref{tab:data}. Contexts are split before questions are derived. Case-folded, whitespace-normalized duplicate contexts are removed with test taking precedence; the manifest records 15 within-split and 11 cross-split removals. Banking training data is divided approximately 80/10/10 into training, validation, and calibration. SST development data is divided equally between validation and calibration.
+
+\begin{table}[t]
+\caption{Retained source contexts shared by every configuration}
+\label{tab:data}
+\centering
+\begin{tabular}{lrrr}\toprule
+Partition & Banking & SST-5 & Total\\\midrule
+Training & 7,993 & 8,531 & 16,524\\
+Validation & 999 & 550 & 1,549\\
+Calibration & 1,000 & 550 & 1,550\\
+Test & 3,079 & 2,210 & 5,289\\\bottomrule
+\end{tabular}
+\end{table}
+
+Banking choices contain the correct intent and 1--9 sampled alternatives. Both queried binary labels occur among the supplied options in packed requests, removing an option-presence shortcut. Binary positives are sampled with probability 0.5; the two predicates are sampled independently and may have equal truth values. Training varies the choice/binary packing recipe, candidates, and question order deterministically by epoch. The common request-generation seed gives identical per-epoch supervision; early stopping changes total exposure. Fixed evaluation requests contain one choice and two binary questions per banking context, and one sentiment question per review. Test counts are 3,079 choice, 6,158 binary, and 2,210 sentiment decisions.
+
+The shortlist always includes the true label. Reported choice accuracy is therefore not all-77 intent detection or retrieval quality. Binary decision prevalence is approximately balanced by construction rather than representative of all production queries. SST sentiment labels do not provide banking sentiment supervision.
+
+\subsection{Training, Selection, and Resources}
+The study uses seed 42 and new checkpoints for every configuration. Both Jevlet variants start from the same pinned pretrained DistilBERT revision. Transformers train for at most six epochs using AdamW, learning rate $3\times10^{-5}$, weight decay 0.01, 10\% linear warm-up, gradient clipping at one, batch size eight, and two-step accumulation. CUDA mixed precision is enabled during training. Validation and timing use float32. Checkpoints minimize validation loss with patience two; the Jevlet variant is chosen using uncalibrated validation sentiment accuracy rather than test accuracy.
+
+The linear configurations have a separate optimization budget: at most 40 epochs, batch size 256, learning rate 0.01, weight decay $10^{-4}$, and patience five. This accommodates their different scale and convergence behavior; it is not an equal-compute comparison or a comprehensive hyperparameter search. Their logistic objective includes the Brier term, so ``logistic'' denotes the classifier link rather than an unmodified maximum-likelihood solver.
+
+All learned-model forward/backward passes, validation/test inference, and temperature fitting use CUDA, with no CPU fallback. Tokenization, TF-IDF extraction, serialization, and metric summaries use CPU routines. The experimental device is an NVIDIA GeForce RTX 4060 Laptop GPU with 8~GiB VRAM. A monitor samples device memory, utilization, temperature, and power every ten seconds. Peak allocated memory is separately recorded by PyTorch. Models run sequentially and release cached allocations between configurations.
+
+Training times exclude initial feature/model preparation, downloads, calibration, and test evaluation. They include the training loop, validation, and best-checkpoint saving. Hardware power and thermal conditions may influence elapsed time; these measurements do not imply that the device form factor changes the learning objective or intrinsically lowers model quality.
+
+\subsection{Metrics and Inference Timing}
+Choice reports accuracy and macro-F1 over the 77 original intent IDs. Sentiment reports accuracy, macro-F1, discrete MAE, and expected-score MAE. Binary prediction reports accuracy and AUROC. Probability metrics are 15-bin top-label expected calibration error (ECE), NLL, and summed multiclass Brier error.
+
+Timing uses the same fixed banking requests, five warm-up iterations, and twenty measured repetitions, with CUDA synchronization around each interval. Batch one uses one request; batch 32 uses 32 requests and reports amortized milliseconds per request. Jevlet uses packed execution, while context classifiers encode the context once and score the known labels. Forward timing includes probability construction; a separate scope includes fresh preprocessing and transfer. Initial loading and JSON serialization are excluded. Python output selection differs between implementations, and input lengths/tokenizers differ, so these are implementation-level workload measurements rather than isolated architectural speedups.
+
+\section{Results and Discussion}
+\subsection{Sentiment Head Selection}
+The ordinal variant obtains 26.36\% validation sentiment accuracy, compared with 50.73\% for the categorical variant. The validation-selected configuration is Jevlet (softmax). Their calibrated test sentiment accuracies are 35.20\% and 52.22\%, respectively, with MAEs of 0.8584 and 0.5724. The softmax-minus-ordinal difference is +17.01 percentage points. This is one trained pair, so the difference should not be interpreted as an average over random initializations.
+
+The ordinal model's predicted counts for levels one through five are 838, 0, 451, 0, 921. The softmax model's corresponding counts are 274, 640, 466, 560, 270. Class coverage helps explain the aggregate sentiment results, but it is not a substitute for per-class accuracy. Replacing the head changes both the parameterization and the sentiment objective, so this ablation does not separate those two factors.
+
+The improvement also has a multi-task cost. Choice accuracy changes from 97.04\% in ordinal Jevlet to 95.45\% in softmax Jevlet, while binary accuracy changes from 97.99\% to 96.83\%. Both variants share their encoder across tasks, so changing sentiment gradients can affect the banking heads. The validation selection rule prioritizes sentiment accuracy; it should not be interpreted as a universal preference for every application.
+
+\begin{table*}[t]
+\caption{Calibrated test comparison. Accuracies are percentages. Choice F1 is over original intent IDs; sentiment F1 is over five levels. Every row is newly trained with seed 42.}
+\label{tab:quality}
+\centering\footnotesize\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrrrrr}\toprule
+Model & Choice \% & Choice F1 & Sent. \% & Sent. F1 & MAE & Binary \% & AUROC\\\midrule
+Jevlet (ordinal) & 97.04 & 0.9703 & 35.20 & 0.2770 & 0.8584 & 97.99 & 0.9969 \\
+Jevlet (softmax) & 95.45 & 0.9546 & 52.22 & 0.5141 & 0.5724 & 96.83 & 0.9931 \\
+TF-IDF + logistic & 97.86 & 0.9786 & 39.86 & 0.3754 & 0.8394 & 95.96 & 0.9946 \\
+TF-IDF + linear SVM & 97.76 & 0.9776 & 39.77 & 0.3736 & 0.8516 & 95.73 & 0.9939 \\
+DistilBERT classifier & 97.21 & 0.9720 & 49.23 & 0.4324 & 0.5837 & 89.48 & 0.9884 \\
+BERT-base classifier & 97.08 & 0.9707 & 53.12 & 0.4875 & 0.5443 & 90.40 & 0.9911 \\
+RoBERTa-base classifier & 97.73 & 0.9772 & 54.12 & 0.4782 & 0.5059 & 93.28 & 0.9927 \\
+\bottomrule\end{tabular}
+\end{table*}
+
+\subsection{Comparison with External Classifiers}
+Table~\ref{tab:quality} shows the complete test comparison. The highest sentiment accuracy is 54.12\%, achieved by RoBERTa-base classifier; the highest shortlist accuracy is 97.86\%, achieved by TF-IDF + logistic. The selected Jevlet configuration has sentiment macro-F1 0.5141, MAE 0.5724, and expected-score MAE 0.6247. These measures distinguish exact-level correctness, coverage across classes, and ordinal distance.
+
+The TF-IDF logistic and squared-hinge configurations achieve 97.86\% and 97.76\% shortlist accuracy, respectively, with sentiment accuracies of 39.86\% and 39.77\%. Their banking results show why lightweight lexical models belong in this comparison. Their sentiment results also illustrate that a model family can have different strengths across the two datasets. Choosing a system therefore requires the task-specific results and resource measurements together.
+
+The context classifiers are genuine alternatives for these fixed datasets: they can reuse one encoded context and select known output labels without marker text. Jevlet's typed interface is therefore an engineering benefit rather than automatic evidence of superior quality or lower cost. A model can perform well on banking and poorly on sentiment, and a stronger sentiment encoder may require more parameters or training memory. Table~\ref{tab:resources} makes those costs explicit instead of collapsing the study into a single leaderboard score.
+
+Table~\ref{tab:intervals} gives paired bootstrap intervals for the selected Jevlet's sentiment accuracy difference against external comparators. We resample the same 2,210 review contexts 2,000 times with seed 42. Positive differences favor Jevlet. These intervals reflect variation in sampled evaluation contexts conditional on the fitted models; they do not measure training-seed uncertainty or correct for the exploratory nature of the study.
+
+\begin{table}[t]
+\caption{Selected Jevlet minus comparator sentiment accuracy, in percentage points; paired 95\% percentile intervals}
+\label{tab:intervals}
+\centering\footnotesize\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrr}\toprule
+Comparator & Difference & Interval\\\midrule
+TF-IDF + logistic & +12.35 & [+9.73, +14.93] \\
+TF-IDF + linear SVM & +12.44 & [+9.91, +15.11] \\
+DistilBERT classifier & +2.99 & [+0.81, +5.07] \\
+BERT-base classifier & -0.90 & [-3.03, +1.36] \\
+RoBERTa-base classifier & -1.90 & [-4.21, +0.45] \\
+\bottomrule\end{tabular}
+\end{table}
+
+\subsection{Probability Quality}
+Table~\ref{tab:calibration} reports the selected Jevlet's metrics before and after calibration. Calibration is evaluated on test data after temperature fitting on a disjoint calibration partition. The softmax variant's discrete predictions are invariant to positive temperature scaling, so any gain from its new sentiment head should not be attributed to calibration alone. NLL, Brier error, and ECE can change independently; a temperature chosen to minimize calibration-set NLL is not guaranteed to minimize test ECE.
+
+\begin{table*}[t]
+\caption{Selected Jevlet probability quality: before (B) and after (A) temperature fitting. Lower values are better.}
+\label{tab:calibration}
+\centering\small
+\begin{tabular}{lrrrrrr}\toprule
+Head & ECE B & ECE A & NLL B & NLL A & Brier B & Brier A\\\midrule
+Choice & 0.0118 & 0.0101 & 0.1457 & 0.1390 & 0.0707 & 0.0707 \\
+Sentiment & 0.0988 & 0.0221 & 1.1469 & 1.1062 & 0.6234 & 0.6042 \\
+Binary & 0.0144 & 0.0064 & 0.1020 & 0.0973 & 0.0519 & 0.0506 \\
+\bottomrule\end{tabular}
+\end{table*}
+
+\subsection{Training and Inference Cost}
+\begin{table*}[t]
+\caption{Measured resources and CUDA float32 median forward time. Parameter counts are millions; memory is peak allocated GiB. Batch-32 time is amortized ms/request. Times include the evaluated probability-selection implementation.}
+\label{tab:resources}
+\centering\small
+\begin{tabular}{lrrrrrr}\toprule
+Model & Parameters & Epochs & Train min & Peak GiB & Batch-1 ms & Batch-32 ms\\\midrule
+Jevlet (ordinal) & 66.37 & 6 & 11.55 & 1.36 & 3.04 & 1.94 \\
+Jevlet (softmax) & 66.37 & 5 & 9.48 & 1.36 & 8.40 & 1.98 \\
+TF-IDF + logistic & 3.18 & 26 & 2.58 & 0.08 & 0.26 & 0.01 \\
+TF-IDF + linear SVM & 3.18 & 14 & 1.03 & 0.08 & 0.57 & 0.03 \\
+DistilBERT classifier & 66.49 & 4 & 4.65 & 1.28 & 3.69 & 0.49 \\
+BERT-base classifier & 109.60 & 4 & 8.36 & 2.17 & 6.79 & 0.97 \\
+RoBERTa-base classifier & 124.77 & 4 & 8.47 & 2.40 & 7.63 & 0.95 \\
+\bottomrule\end{tabular}
+\end{table*}
+
+The selected Jevlet's median forward times are 8.40~ms for batch one and 1.98~ms per request for batch 32. Including preprocessing and transfer gives 10.55~ms and 2.65~ms, respectively. Its training interval is 9.48 minutes, with peak allocated memory of 1.36~GiB. The table reports the complete configurations rather than assuming that encoder size alone determines runtime. Sparse lexical preprocessing, padding, question length, output selection, and hardware conditions all contribute to application-level cost.
 
 \section{Limitations}
-Jevlet is an English task-specific supervised model. The interface does not
-establish arbitrary question following, unseen intent transfer, new scoring
-rubrics, or general decision-making ability. Candidate sets contain the gold
-label, so intent results are shortlist results rather than all-77 detection.
-Balanced binary training does not represent natural intent-query prevalence.
-Packing correlated questions may permit information sharing; standalone
-evaluation is required to characterize its impact. Calibration can shift with
-question wording, option count, packing, and data distribution. Temperature
-fitting on one distribution may not transfer. Long contexts lose evidence,
-and typed output correctness does not imply semantic answer correctness.
-Single-seed comparisons and capped FLAN subsets limit statistical conclusions.
+The study uses one random seed and one predefined optimization schedule per model family. It does not estimate run-to-run variability or establish best possible accuracy for BERT, RoBERTa, linear SVMs, or Jevlet. The original test set was inspected during earlier diagnosis, which motivated the sentiment ablation. Although checkpoint and variant selection in these runs use validation data, the final comparison is exploratory and should be confirmed on fresh held-out data or another dataset.
+
+Source splits and evaluation decisions are shared, but tokenization, truncation, input representations, objectives, batch sizes, and optimization budgets differ as documented. These differences prevent a claim that every observed gap is caused solely by encoder architecture. The context comparators operate on known label IDs; Jevlet accepts option and question text, but unseen-label transfer and free-form question understanding are not evaluated.
+
+Candidate sets contain the gold label, and binary queries are approximately balanced. Confidence may shift when a production shortlist omits the true intent, when query prevalence changes, or when text comes from another domain. Sentiment is evaluated only on English reviews with a fixed five-level rubric. Multiple banking decisions share a context and are correlated. Timing uses a small fixed workload rather than a concurrent service-load test. Downloaded weights and training data should be redistributed only under their applicable terms.
 
 \section{Conclusion}
-Jevlet supplies a reproducible, modest-compute pipeline for investigating
-parallel typed decisions with a small encoder. Its contribution is the
-controlled evaluation of shared-sequence inference, supervised task quality,
-and probability calibration. Conclusions about performance must follow the
-completed experiment artifacts.
+This study compares retrained typed Jevlet variants with GPU-trained lexical and transformer classifiers using a shared source-data and evaluation protocol. The categorical sentiment head provides a direct alternative to ordered cumulative scoring, and validation-based selection avoids choosing a variant from its test score. The measured results show where each configuration stands in exact classification, ordinal error, probability quality, and computational cost. Jevlet's practical role should be judged against those alternatives for the intended task, rather than inferred from its typed interface alone. Repeated seeds, stronger tuning, and fresh evaluation data are the next steps toward more general conclusions.
 
-\bibliographystyle{IEEEtran}
-\bibliography{references}
+\begin{thebibliography}{10}
+\bibitem{bert}J. Devlin, M.-W. Chang, K. Lee, and K. Toutanova, ``BERT: Pre-training of deep bidirectional transformers for language understanding,'' in \emph{Proc. NAACL-HLT}, 2019, pp. 4171--4186, doi: 10.18653/v1/N19-1423.
+\bibitem{distilbert}V. Sanh, L. Debut, J. Chaumond, and T. Wolf, ``DistilBERT, a distilled version of BERT: Smaller, faster, cheaper and lighter,'' \emph{arXiv preprint arXiv:1910.01108}, 2019. [Online]. Available: \url{https://arxiv.org/abs/1910.01108}
+\bibitem{roberta}Y. Liu et al., ``RoBERTa: A robustly optimized BERT pretraining approach,'' \emph{arXiv preprint arXiv:1907.11692}, 2019. [Online]. Available: \url{https://arxiv.org/abs/1907.11692}
+\bibitem{svm}C. Cortes and V. Vapnik, ``Support-vector networks,'' \emph{Machine Learning}, vol. 20, pp. 273--297, 1995, doi: 10.1007/BF00994018.
+\bibitem{laya}N. Mukkunnoth and Convai Innovations, ``Laya: Non-autoregressive System 1 decision engine,'' GitHub repository. Accessed: Oct. 11, 2026. [Online]. Available: \url{https://github.com/NandhaKishorM/laya}
+\bibitem{coral}W. Cao, V. Mirjalili, and S. Raschka, ``Rank consistent ordinal regression for neural networks with application to age estimation,'' \emph{Pattern Recognition Letters}, vol. 140, pp. 325--331, 2020. [Online]. Available: \url{https://arxiv.org/abs/1901.07884}
+\bibitem{guo}C. Guo, G. Pleiss, Y. Sun, and K. Q. Weinberger, ``On calibration of modern neural networks,'' in \emph{Proc. 34th Int. Conf. Machine Learning}, vol. 70, 2017, pp. 1321--1330. [Online]. Available: \url{https://proceedings.mlr.press/v70/guo17a.html}
+\bibitem{brier}G. W. Brier, ``Verification of forecasts expressed in terms of probability,'' \emph{Monthly Weather Review}, vol. 78, no. 1, pp. 1--3, 1950.
+\bibitem{banking}I. Casanueva, T. Temcinas, D. Gerz, M. Henderson, and I. Vuli\'{c}, ``Efficient intent detection with dual sentence encoders,'' in \emph{Proc. 2nd Workshop on Natural Language Processing for Conversational AI}, 2020, pp. 38--45, doi: 10.18653/v1/2020.nlp4convai-1.5.
+\bibitem{sst}R. Socher, A. Perelygin, J. Wu, J. Chuang, C. D. Manning, A. Ng, and C. Potts, ``Recursive deep models for semantic compositionality over a sentiment treebank,'' in \emph{Proc. EMNLP}, 2013, pp. 1631--1642. [Online]. Available: \url{https://aclanthology.org/D13-1170/}
+\end{thebibliography}
 \end{document}

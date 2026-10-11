@@ -4,7 +4,11 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 checkpoints/
+checkpoints.zip
 results/
+tmp/
+# Local archived manuscript scaffold; the maintained source is paper/paper.tex.
+paper/paper_scaffold.tex
 paper/generated/
 paper/*.aux
 paper/*.log
@@ -12,4 +16,7 @@ paper/*.out
 paper/*.bbl
 paper/*.blg
 paper/*.pdf
+paper/*.fdb_latexmk
+paper/*.fls
+paper/*.synctex.gz
 

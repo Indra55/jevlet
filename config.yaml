@@ -11,7 +11,7 @@ sst_revision: main
 options_min: 2
 options_max: 10
 train:
-  epochs: 5
+  epochs: 6
   batch_size: 8
   accumulation: 2
   lr: 0.00003

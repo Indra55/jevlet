@@ -42,6 +42,7 @@ def collect_records(model, requests, cfg, items=None):
                 if head == "choice":
                     logits = logits[:len(question["options"])]
                 records.append({**question, "source_id": request.get("source_id"),
+                                "score_mode": model.score_mode,
                                 "logits": logits.tolist(),
                                 "context_tokens_dropped": item["context_tokens_dropped"]})
     return records
@@ -105,6 +106,9 @@ def train(cfg, directory, bundle=None, head=None):
             raise RuntimeError("Nonfinite validation loss")
         history.append({"epoch": epoch + 1, "train_loss": total_loss / len(batches), "validation_loss": val_loss})
         print(f"epoch {epoch + 1}: train={history[-1]['train_loss']:.4f} validation={val_loss:.4f}", flush=True)
+        write_json(directory / "progress.json", {"history": history, "device": str(device),
+                   "elapsed_seconds": time.perf_counter() - started,
+                   "peak_gpu_bytes": torch.cuda.max_memory_allocated(device) if device.type == "cuda" else None})
         if val_loss < best:
             best, stale = val_loss, 0
             model.save(directory)
@@ -117,7 +121,7 @@ def train(cfg, directory, bundle=None, head=None):
     del optimizer, scheduler, model
     model = Jevlet.load(directory, str(device))
     calibration = collect_records(model, requests_for(bundle, "calibration", cfg, head=head), cfg)
-    temperatures, details = fit_temperatures(calibration)
+    temperatures, details = fit_temperatures(calibration, str(device))
     model.temperatures.copy_(torch.tensor([temperatures[h] for h in HEADS], device=device))
     model.save(directory)
     write_json(directory / "calibration.json", {"temperatures": temperatures, "fit": details})
