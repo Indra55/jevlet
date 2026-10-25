@@ -8,6 +8,26 @@ from jevlet.metrics import fit_temperatures, score_records
 from jevlet.model import Jevlet, training_loss
 
 
+def test_five_validation_views_preserve_labels_and_canonical_test():
+    from jevlet.data import requests_for
+    rows = [{"id": "bank/0", "domain": "banking", "text": "lost my card", "label": 0},
+            {"id": "sst/0", "domain": "sst", "text": "great film", "label": 4}]
+    bundle = {"label_names": ["lost_card", "cash", "transfer"],
+              "splits": {"validation": rows, "test": rows}}
+    cfg = {"seed": 42, "options_min": 2, "options_max": 3, "eval": {"validation_views": 5}}
+    requests = requests_for(bundle, "validation", cfg)
+    reviews = [r for r in requests if r["source_id"] == "sst/0"]
+    assert len(requests) == 10 and len({r["questions"][0]["text"] for r in reviews}) == 5
+    assert all(r["questions"][0]["target"] == 4 for r in reviews)
+    for r in requests:
+        if r["source_id"] == "bank/0":
+            q = r["questions"][0]
+            assert q["option_labels"][q["target"]] == 0
+    original = requests_for(bundle, "test", cfg)
+    changed = {**cfg, "seed": 44, "request_seed": 42}
+    assert requests_for(bundle, "test", changed) == original
+
+
 def test_categorical_gpu_backward_reload_and_calibration(tmp_path):
     assert torch.cuda.is_available(), "GPU-only experiment requires CUDA"
     path = tmp_path / "vocab.txt"

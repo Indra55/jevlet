@@ -16,6 +16,15 @@ from .config import write_json
 TOKENS = ("[Q]", "[OPT]")
 SCORE_QUESTION = "How positive is this review?"
 CHOICE_QUESTION = "What is the customer's intent?"
+SCORE_TEMPLATES = (SCORE_QUESTION, "Rate the sentiment of this review from one to five.",
+                   "What is the sentiment level of this review?", "How positive or negative is this review?",
+                   "Choose the five-level sentiment rating for this review.")
+CHOICE_TEMPLATES = (CHOICE_QUESTION, "Which banking intent matches this message?",
+                    "Select the customer's banking intent.", "What banking issue is the customer describing?",
+                    "Which of these intents best describes the message?")
+BINARY_TEMPLATES = ("Is this about {}?", "Does this message concern {}?",
+                    "Is the customer's issue related to {}?", "Does the customer mention an issue about {}?",
+                    "Is {} the intent of this message?")
 
 
 def normalized(text):
@@ -107,11 +116,12 @@ def pretty_label(name):
     return name.replace("_", " ").rstrip("?").lower()
 
 
-def sample_request(row, names, cfg, epoch=0, training=False, fixed_k=None):
-    digest = hashlib.sha256(f"{cfg['seed']}:{epoch}:{row['id']}".encode()).digest()
+def sample_request(row, names, cfg, epoch=0, training=False, fixed_k=None, question_variant=None):
+    digest = hashlib.sha256(f"{cfg.get('request_seed', cfg['seed'])}:{epoch}:{row['id']}".encode()).digest()
     rng = random.Random(int.from_bytes(digest[:8], "big"))
+    variant = rng.randrange(5) if question_variant == "random" else (question_variant or 0)
     if row["domain"] == "sst":
-        questions = [{"id": "sentiment", "type": "score", "text": SCORE_QUESTION,
+        questions = [{"id": "sentiment", "type": "score", "text": SCORE_TEMPLATES[variant],
                       "target": row["label"]}]
     else:
         gold = row["label"]
@@ -121,7 +131,7 @@ def sample_request(row, names, cfg, epoch=0, training=False, fixed_k=None):
         recipe = rng.choice(("choice", "yesno", "pair", "triple")) if training else "triple"
         questions = []
         if recipe != "yesno":
-            questions.append({"id": "intent", "type": "choice", "text": CHOICE_QUESTION,
+            questions.append({"id": "intent", "type": "choice", "text": CHOICE_TEMPLATES[variant],
                               "options": [pretty_label(names[i]) for i in candidates],
                               "option_labels": candidates, "target": candidates.index(gold)})
         count = {"choice": 0, "yesno": 1, "pair": 1, "triple": 2}[recipe]
@@ -130,7 +140,7 @@ def sample_request(row, names, cfg, epoch=0, training=False, fixed_k=None):
             pool = candidates if recipe != "yesno" else list(range(len(names)))
             queried = gold if positive else rng.choice([n for n in pool if n != gold])
             questions.append({"id": f"about_{i}", "type": "yesno",
-                              "text": f"Is this about {pretty_label(names[queried])}?",
+                              "text": BINARY_TEMPLATES[variant].format(pretty_label(names[queried])),
                               "query_label": queried, "target": int(positive)})
         if training:
             rng.shuffle(questions)
@@ -138,8 +148,18 @@ def sample_request(row, names, cfg, epoch=0, training=False, fixed_k=None):
 
 
 def requests_for(bundle, split, cfg, epoch=0, training=False, fixed_k=None, head=None):
-    requests = [sample_request(row, bundle["label_names"], cfg, epoch, training, fixed_k)
-                for row in bundle["splits"][split]]
+    views = cfg.get("eval", {}).get("validation_views", 1) if split == "validation" else 1
+    if not 1 <= views <= 5:
+        raise ValueError("validation_views must be between one and five")
+    requests = []
+    for view in range(views):
+        variant = "random" if training and cfg.get("augment_questions", False) else view
+        for row in bundle["splits"][split]:
+            request = sample_request(row, bundle["label_names"], cfg,
+                                     epoch if training else epoch + view, training, fixed_k, variant)
+            if views > 1:
+                request["validation_view"] = view
+            requests.append(request)
     if head:
         requests = [{**req, "questions": [q]} for req in requests
                     for q in req["questions"] if q["type"] == head]

@@ -10,7 +10,7 @@ from transformers import get_linear_schedule_with_warmup
 
 from .config import HEADS, device_for, metadata, seed_all, write_json
 from .data import collate, packed_items, prepare_data, requests_for
-from .metrics import fit_temperatures
+from .metrics import fit_temperatures, score_records
 from .model import Jevlet, training_loss
 
 
@@ -42,6 +42,7 @@ def collect_records(model, requests, cfg, items=None):
                 if head == "choice":
                     logits = logits[:len(question["options"])]
                 records.append({**question, "source_id": request.get("source_id"),
+                                "validation_view": request.get("validation_view", 0),
                                 "score_mode": model.score_mode,
                                 "logits": logits.tolist(),
                                 "context_tokens_dropped": item["context_tokens_dropped"]})
@@ -53,7 +54,9 @@ def train(cfg, directory, bundle=None, head=None):
     seed_all(cfg["seed"], cfg["cpu_threads"])
     bundle = bundle or prepare_data(cfg, directory)
     write_json(directory / "data.json", bundle)
-    model = Jevlet.pretrained(cfg).to(device_for(cfg["device"]))
+    model = (Jevlet.load(cfg["initial_checkpoint"], cfg["device"]) if cfg.get("initial_checkpoint")
+             else Jevlet.pretrained(cfg).to(device_for(cfg["device"])))
+    model.temperatures.fill_(1.)
     device = next(model.parameters()).device
     # Separate task baselines receive the same triple-derived supervision, unpacked by head.
     validation = requests_for(bundle, "validation", cfg, head=head)
@@ -104,13 +107,19 @@ def train(cfg, directory, bundle=None, head=None):
         val_loss = sum(losses) / len(losses)
         if not math.isfinite(val_loss):
             raise RuntimeError("Nonfinite validation loss")
-        history.append({"epoch": epoch + 1, "train_loss": total_loss / len(batches), "validation_loss": val_loss})
+        entry = {"epoch": epoch + 1, "train_loss": total_loss / len(batches), "validation_loss": val_loss}
+        selection_loss = val_loss
+        if cfg.get("checkpoint_metric") == "sentiment_accuracy":
+            metrics, _ = score_records(collect_records(model, validation, cfg, val_items))
+            entry["validation_metrics"] = metrics
+            selection_loss = -metrics["score"]["accuracy"]
+        history.append(entry)
         print(f"epoch {epoch + 1}: train={history[-1]['train_loss']:.4f} validation={val_loss:.4f}", flush=True)
         write_json(directory / "progress.json", {"history": history, "device": str(device),
                    "elapsed_seconds": time.perf_counter() - started,
                    "peak_gpu_bytes": torch.cuda.max_memory_allocated(device) if device.type == "cuda" else None})
-        if val_loss < best:
-            best, stale = val_loss, 0
+        if selection_loss < best:
+            best, stale = selection_loss, 0
             model.save(directory)
         else:
             stale += 1

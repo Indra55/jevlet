@@ -307,7 +307,49 @@ def context_latency(model, features, requests, temperatures):
     return {"measurements": output, "scope": "GPU forward/probabilities and fresh preprocessing; excludes loading/JSON"}
 
 
-def run(names):
+def print_report(summary, names, history=False):
+    """Display recorded metrics/history without loading models or running CUDA."""
+    rows = [(name, summary["models"][name]) for name in names if name in summary["models"]]
+    refined_path = ROOT / "results/jevlet_refinement.json"
+    if "jevlet_softmax" in names and refined_path.exists():
+        refined = json.loads(refined_path.read_text())
+        if "test" in refined:
+            checkpoint = Path(refined["selected_checkpoint"])
+            info_path = checkpoint / "training.json"
+            info = json.loads(info_path.read_text()) if info_path.exists() else {}
+            rows.append(("jevlet_refined", {"calibrated": refined["test"]["calibrated"],
+                         "checkpoint": str(checkpoint), "epochs_completed": len(info.get("history", []))}))
+    if not rows:
+        print("No saved results for the requested models.", flush=True)
+        return
+    print("\nSAVED TEST RESULTS (calibrated; accuracy in percent)", flush=True)
+    print(f'{"Model":<25} {"Choice %":>9} {"Sent. %":>9} {"Sent. F1":>9} {"Binary %":>9}', flush=True)
+    for name, result in rows:
+        metrics = result["calibrated"]
+        print(f'{name:<25} {100 * metrics["choice"]["accuracy"]:>9.2f} '
+              f'{100 * metrics["score"]["accuracy"]:>9.2f} '
+              f'{metrics["score"]["macro_f1"]:>9.4f} '
+              f'{100 * metrics["yesno"]["accuracy"]:>9.2f}', flush=True)
+    if any(name == "jevlet_refined" for name, _ in rows):
+        print("Refined Jevlet comes from the separate refinement run.", flush=True)
+    if not history:
+        return
+    print("\nRECORDED TRAINING HISTORY (previous runs; no training is started by this display)", flush=True)
+    for name, result in rows:
+        info_path = Path(result.get("checkpoint", str(BASE / name))) / "training.json"
+        if not info_path.exists():
+            print(f"\n{name}: training history file unavailable: {info_path}", flush=True)
+            continue
+        info = json.loads(info_path.read_text())
+        print(f'\n{name}: {len(info["history"])} epochs, '
+              f'{info["training_seconds"]:.1f} seconds, '
+              f'peak allocated GPU memory {info["peak_gpu_bytes"] / 2**30:.2f} GiB', flush=True)
+        for epoch in info["history"]:
+            print(f'  epoch {epoch["epoch"]}: train_loss={epoch["train_loss"]:.4f} '
+                  f'validation_loss={epoch["validation_loss"]:.4f}', flush=True)
+
+
+def run(names, history=False):
     require_cuda()
     BASE.mkdir(parents=True, exist_ok=True)
     cfg = load_config()
@@ -395,9 +437,20 @@ def run(names):
     finally:
         stop.set()
         thread.join(timeout=12)
+    print_report(summary, names, history)
 
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("--models", nargs="+", choices=NAMES, default=NAMES)
-    run(p.parse_args().models)
+    p.add_argument("--show-results", action="store_true",
+                   help="Only display saved results; do not train, evaluate, or require CUDA")
+    p.add_argument("--history", action="store_true", help="Also display recorded per-epoch training losses")
+    args = p.parse_args()
+    if args.show_results:
+        summary_path = ROOT / "results/gpu_comparison_summary.json"
+        if not summary_path.exists():
+            p.error(f"No saved comparison results: {summary_path}")
+        print_report(json.loads(summary_path.read_text()), args.models, args.history)
+    else:
+        run(args.models, args.history)
