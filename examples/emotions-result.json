@@ -1,0 +1,50 @@
+{
+  "case": "emotions",
+  "answers": [
+    {
+      "id": "emotions",
+      "type": "multilabel",
+      "answer": [
+        "gratitude",
+        "joy"
+      ],
+      "options": [
+        "gratitude",
+        "joy",
+        "admiration",
+        "sadness",
+        "anger",
+        "neutral"
+      ],
+      "probabilities": [
+        0.9628047943115234,
+        0.9174147844314575,
+        0.10923290252685547,
+        0.022222191095352173,
+        0.008578832261264324,
+        0.012291659601032734
+      ],
+      "threshold": 0.37999999999999995,
+      "probability_semantics": "independent_label_probabilities"
+    }
+  ],
+  "context_tokens_dropped": 0,
+  "inference_ms": 467.24,
+  "questions": [
+    {
+      "id": "emotions",
+      "type": "multilabel",
+      "text": "Which emotions are expressed in this text?",
+      "options": [
+        "gratitude",
+        "joy",
+        "admiration",
+        "sadness",
+        "anger",
+        "neutral"
+      ]
+    }
+  ],
+  "encoder_passes": 1,
+  "calibrated": true
+}

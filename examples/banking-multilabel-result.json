@@ -1,0 +1,51 @@
+{
+  "case": "banking_multi",
+  "answers": [
+    {
+      "id": "banking_multi",
+      "type": "banking_multilabel",
+      "answer": [
+        "make open apply setup get activate",
+        "transfer payment deposit",
+        "wrong notworking notshowing"
+      ],
+      "options": [
+        "make open apply setup get activate",
+        "transfer payment deposit",
+        "wrong notworking notshowing",
+        "card",
+        "balance",
+        "lost stolen"
+      ],
+      "probabilities": [
+        0.793139636516571,
+        0.952581524848938,
+        0.9598802924156189,
+        0.0033086277544498444,
+        0.00570406811311841,
+        0.0048897285014390945
+      ],
+      "threshold": 0.5299999999999999,
+      "probability_semantics": "independent_label_probabilities"
+    }
+  ],
+  "context_tokens_dropped": 0,
+  "inference_ms": 88.86,
+  "questions": [
+    {
+      "id": "banking_multi",
+      "type": "banking_multilabel",
+      "text": "Which intent components apply to this banking message?",
+      "options": [
+        "make open apply setup get activate",
+        "transfer payment deposit",
+        "wrong notworking notshowing",
+        "card",
+        "balance",
+        "lost stolen"
+      ]
+    }
+  ],
+  "encoder_passes": 1,
+  "calibrated": true
+}

@@ -1,3 +1,13 @@
+"""Render the current evidence-backed manuscript; --legacy restores the prior CUDA-only writer."""
+import runpy
+import sys
+from pathlib import Path
+
+if "--legacy" not in sys.argv:
+    runpy.run_path(str(Path(__file__).with_name("update_multilabel_paper.py")), run_name="__main__")
+    raise SystemExit
+sys.argv.remove("--legacy")
+
 """Write the existing Jevlet-focused manuscript from completed measurements."""
 import json
 import argparse

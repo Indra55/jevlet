@@ -1,0 +1,11 @@
+{
+  "text": "Thank you so much! I am really happy you helped me.",
+  "questions": [
+    {
+      "id": "emotions",
+      "type": "multilabel",
+      "text": "Which emotions are expressed in this text?",
+      "options": ["gratitude", "joy", "admiration", "sadness", "anger", "neutral"]
+    }
+  ]
+}

@@ -7,9 +7,10 @@ from itertools import cycle, islice
 
 import numpy as np
 import torch
+from tqdm.auto import tqdm
 
 from . import ROOT
-from .config import HEADS, metadata, seed_all, write_json
+from .config import MULTILABEL_HEADS, metadata, seed_all, write_json
 from .data import collate, packed_items, requests_for
 from .metrics import make_figures, risk_coverage, score_records
 from .model import Jevlet
@@ -55,6 +56,8 @@ def benchmark(model, requests, cfg, devices=None):
               "gpu": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None},
               "precision": "float32", "questions_per_request": 3,
               "cuda": {"status": "not_available"} if not torch.cuda.is_available() else {}, "measurements": []}
+    progress = tqdm(total=len(devices) * 2 * 3 * (cfg["eval"]["latency_warmup"] + cfg["eval"]["latency_repeats"] * 2),
+                    desc="Latency benchmark", unit="measurement", dynamic_ncols=True, mininterval=1)
     try:
         for device_name in devices:
             model.to(device_name).eval()
@@ -67,6 +70,7 @@ def benchmark(model, requests, cfg, devices=None):
             for size in (1, 32):
                 selected = list(islice(cycle(requests[:cfg["eval"]["latency_requests"]]), size))
                 for mode in ("packed", "sequential", "batched_questions"):
+                    progress.set_postfix(device=str(device), batch=size, layout=mode, refresh=False)
                     items = packed_items(model.tokenizer, selected, model.max_length)
                     batches = forward_batches(model, items, mode)
 
@@ -76,6 +80,7 @@ def benchmark(model, requests, cfg, devices=None):
 
                     for _ in range(cfg["eval"]["latency_warmup"]):
                         run_forward()
+                        progress.update(1)
                     if device.type == "cuda":
                         torch.cuda.reset_peak_memory_stats(device)
                     forwards, complete = [], []
@@ -92,6 +97,8 @@ def benchmark(model, requests, cfg, devices=None):
                             model.probabilities(model(batch), batch["omask"])
                         synchronize()
                         complete.append((time.perf_counter() - started) * 1000)
+                        # Keep terminal rendering outside both measured intervals.
+                        progress.update(2)
                     median = float(np.median(forwards))
                     output["measurements"].append({"device": str(device), "mode": mode, "batch_size": size,
                         "forward_calls": len(batches), "encoder_rows": sum(len(b["input_ids"]) for b in batches),
@@ -104,6 +111,7 @@ def benchmark(model, requests, cfg, devices=None):
                         "peak_gpu_bytes": torch.cuda.max_memory_allocated(device) if device.type == "cuda" else None,
                         "repeats": len(forwards), "warmup": cfg["eval"]["latency_warmup"]})
     finally:
+        progress.close()
         model.to(original)
     return output
 
@@ -115,7 +123,7 @@ def write_evaluation(records, temperatures, cfg, run, name, data_sources, latenc
               **metadata(cfg, data_sources), "raw": raw, "calibrated": scaled,
               "temperatures": temperatures, "latency": latency,
               "risk_coverage": {h: dict(zip(("coverage", "risk"), risk_coverage(after, h)))
-                                for h in scaled}}
+                                for h in scaled if h not in MULTILABEL_HEADS}}
     stem = f"{run}_{name}"
     write_json(ROOT / "results" / f"{stem}.json", result)
     write_json(ROOT / "results/predictions" / f"{stem}.json", {"raw": before, "calibrated": after})
@@ -128,9 +136,10 @@ def evaluate(cfg, directory, run, model=None, bundle=None, name="jevlet", with_l
     model = model or Jevlet.load(directory, cfg["device"])
     bundle = bundle or json.loads((directory / "data.json").read_text())
     requests = requests_for(bundle, "test", cfg)
-    records = collect_records(model, requests, cfg)
-    temperatures = dict(zip(HEADS, model.temperatures.cpu().tolist()))
+    records = collect_records(model, requests, cfg, description="Test evaluation")
+    temperatures = dict(zip(model.heads, model.temperatures.cpu().tolist()))
     latency = benchmark(model, requests, cfg) if with_latency else None
+    print("Writing metrics and figures...", flush=True)
     result = write_evaluation(records, temperatures, cfg, run, name, bundle["sources"], latency)
     print(json.dumps(result["calibrated"], indent=2), flush=True)
     return result

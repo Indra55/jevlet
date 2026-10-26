@@ -7,9 +7,9 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
+from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, precision_score, recall_score
 
-from .config import HEADS
+from .config import HEADS, MULTILABEL_HEADS
 from .model import ordinal_probs
 
 
@@ -28,6 +28,8 @@ def ece(confidence, correct, bins=15):
 
 def distribution(head, logits, temperature=1.0, score_mode="ordinal"):
     z = logits / temperature
+    if head in MULTILABEL_HEADS:
+        return z.sigmoid()
     if head == "choice" or (head == "score" and score_mode == "categorical"):
         return z.softmax(-1)
     if head == "score":
@@ -38,19 +40,26 @@ def distribution(head, logits, temperature=1.0, score_mode="ordinal"):
 
 def fit_temperatures(records, device="cpu"):
     temperatures, details = {}, {}
-    for head in HEADS:
+    for head in HEADS + MULTILABEL_HEADS:
         selected = [r for r in records if r["type"] == head]
         if not selected:
+            if head in MULTILABEL_HEADS:
+                continue
             temperatures[head] = 1.0
             details[head] = {"status": "no_samples", "samples": 0}
             continue
-        targets = torch.tensor([r["target"] for r in selected], dtype=torch.long)
+        if head in MULTILABEL_HEADS:
+            flat = [(z, y) for r in selected for z, y in zip(r["logits"], r["target"]) if y >= 0]
+            z = torch.tensor([v[0] for v in flat], dtype=torch.float32)
+            targets = torch.tensor([v[1] for v in flat], dtype=torch.float32)
+        else:
+            targets = torch.tensor([r["target"] for r in selected], dtype=torch.long)
         if head == "choice":
             kmax = max(len(r["logits"]) for r in selected)
             z = torch.full((len(selected), kmax), -1e4)
             for i, r in enumerate(selected):
                 z[i, :len(r["logits"])] = torch.tensor(r["logits"])
-        else:
+        elif head not in MULTILABEL_HEADS:
             z = torch.tensor([r["logits"] for r in selected], dtype=torch.float32)
         z, targets = z.to(device), targets.to(device)
         score_mode = selected[0].get("score_mode", "ordinal")
@@ -59,6 +68,8 @@ def fit_temperatures(records, device="cpu"):
 
         def objective():
             # Bound the search for numerical stability; record any boundary solution.
+            if head in MULTILABEL_HEADS:
+                return torch.nn.functional.binary_cross_entropy_with_logits(z / log_t.clamp(-4, 4).exp(), targets)
             p = distribution(head, z, log_t.clamp(-4, 4).exp(), score_mode)
             return -p[torch.arange(len(selected), device=device), targets].clamp_min(1e-12).log().mean()
 
@@ -81,6 +92,62 @@ def fit_temperatures(records, device="cpu"):
         details[head] = {"status": "fitted", "samples": len(selected), "nll_before": before,
                          "nll_after": after, "at_search_boundary": abs(float(log_t.detach())) >= 4}
     return temperatures, details
+
+
+def fit_multilabel_threshold(records, temperature, head="multilabel"):
+    rows = [r for r in records if r["type"] == head]
+    truth = [y for r in rows for y in r["target"] if y >= 0]
+    probs = [p for r in rows for p, y in zip(distribution("multilabel", torch.tensor(r["logits"]),
+                                                               temperature).tolist(), r["target"]) if y >= 0]
+    if not truth or not any(truth):
+        raise ValueError("Threshold tuning requires observed positive labels in validation data")
+    choices = [(float(f1_score(truth, np.asarray(probs) >= t, zero_division=0)), -abs(t - 0.5), t)
+               for t in np.linspace(0.05, 0.95, 91)]
+    f1, _, threshold = max(choices)
+    return float(threshold), {"split": "validation", "objective": "candidate_micro_f1", "f1": f1,
+                              "samples": len(rows), "grid": "0.05 to 0.95 in steps of 0.01"}
+
+
+def multilabel_metrics(rows, temperature=1.0, bins=15):
+    truth, probabilities, predicted, exact, predictions, labels = [], [], [], [], [], {}
+    covered = total = 0
+    for row in rows:
+        p = distribution("multilabel", torch.tensor(row["logits"]), temperature).numpy()
+        y = np.asarray(row["target"])
+        chosen = p >= row.get("threshold", 0.5)
+        observed = y >= 0
+        truth.extend(y[observed].tolist())
+        probabilities.extend(p[observed].tolist())
+        predicted.extend(chosen[observed].astype(int).tolist())
+        if observed.all():
+            exact.append(bool(np.array_equal(chosen, y)))
+        for label, target, probability, decision in zip(row["option_labels"], y, p, chosen):
+            if target >= 0:
+                labels.setdefault(label, []).append((int(target), float(probability), int(decision)))
+        if "gold_labels" in row:
+            total += len(row["gold_labels"])
+            covered += len(set(row["gold_labels"]) & set(row["option_labels"]))
+        predictions.append({**row, "probabilities": p.tolist(), "predicted": chosen.astype(int).tolist()})
+    y, p, decision = np.asarray(truth), np.asarray(probabilities), np.asarray(predicted)
+    per_label = {}
+    for label, values in sorted(labels.items()):
+        target, _, output = np.asarray(values).T
+        per_label[str(label)] = {"support": int(target.sum()), "observations": len(values),
+            "precision": float(precision_score(target, output, zero_division=0)),
+            "recall": float(recall_score(target, output, zero_division=0)),
+            "f1": float(f1_score(target, output, zero_division=0))}
+    result = {"samples": len(rows), "observed_label_decisions": len(y), "scope": "supplied_candidates",
+              "micro_f1": float(f1_score(y, decision, zero_division=0)),
+              "macro_f1": float(np.mean([v["f1"] for v in per_label.values()])),
+              "precision": float(precision_score(y, decision, zero_division=0)),
+              "recall": float(recall_score(y, decision, zero_division=0)),
+              "exact_set_accuracy": float(np.mean(exact)) if exact else None,
+              "complete_annotation_samples": len(exact),
+              "hamming_loss": float(np.mean(y != decision)), "brier": float(np.mean((p - y) ** 2)),
+              "nll": float(np.mean(-y * np.log(p.clip(1e-12, 1)) - (1-y) * np.log((1-p).clip(1e-12, 1)))),
+              "ece": ece(p, y, bins), "per_label": per_label,
+              "candidate_recall": covered / total if total else None}
+    return result, predictions
 
 
 def score_records(records, temperatures=None, bins=15, intent_count=77):
@@ -117,6 +184,11 @@ def score_records(records, temperatures=None, bins=15, intent_count=77):
         for r, p, pred, conf in zip(rows, probs, predicted, confidence):
             predictions.append({**r, "probabilities": p.tolist(), "predicted": int(pred),
                                 "confidence": float(conf)})
+    for head in MULTILABEL_HEADS:
+        multi = [r for r in records if r["type"] == head]
+        if multi:
+            metrics[head], multi_predictions = multilabel_metrics(multi, temperatures.get(head, 1.0), bins)
+            predictions.extend(multi_predictions)
     return metrics, predictions
 
 

@@ -1,0 +1,16 @@
+% Use preinstalled Times-compatible fonts for the local XeTeX build.
+% Other engines retain IEEEtran's standard font setup.
+\ifdefined\XeTeXversion
+\IfFileExists{/usr/share/fonts/gsfonts/NimbusRoman-Regular.otf}{%
+  \DeclareFontFamily{TU}{ptm}{}
+  \DeclareFontShape{TU}{ptm}{m}{n}{<->"[/usr/share/fonts/gsfonts/NimbusRoman-Regular.otf]:mapping=tex-text"}{}
+  \DeclareFontShape{TU}{ptm}{m}{it}{<->"[/usr/share/fonts/gsfonts/NimbusRoman-Italic.otf]:mapping=tex-text"}{}
+  \DeclareFontShape{TU}{ptm}{b}{n}{<->"[/usr/share/fonts/gsfonts/NimbusRoman-Bold.otf]:mapping=tex-text"}{}
+  \DeclareFontShape{TU}{ptm}{b}{it}{<->"[/usr/share/fonts/gsfonts/NimbusRoman-BoldItalic.otf]:mapping=tex-text"}{}
+  \DeclareFontShape{TU}{ptm}{bx}{n}{<->ssub*ptm/b/n}{}
+  \DeclareFontShape{TU}{ptm}{bx}{it}{<->ssub*ptm/b/it}{}
+  \DeclareFontShape{TU}{ptm}{m}{sc}{<->ssub*ptm/m/n}{}
+  \DeclareFontFamily{TU}{pcr}{}
+  \DeclareFontShape{TU}{pcr}{m}{n}{<->"[/usr/share/fonts/gsfonts/NimbusMonoPS-Regular.otf]:mapping=tex-text"}{}
+}{}
+\fi

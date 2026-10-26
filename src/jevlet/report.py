@@ -3,6 +3,7 @@
 import json
 
 from . import ROOT
+from .config import MULTILABEL_HEADS
 
 
 def number(value):
@@ -21,6 +22,8 @@ def generate_report():
     paper_rows = []
     for result in results:
         for head, scores in result["calibrated"].items():
+            if head in MULTILABEL_HEADS:
+                continue  # Multi-label metrics have their own report and are not single-choice accuracy.
             secondary = scores.get({"choice": "macro_f1", "score": "mae", "yesno": "auroc"}[head])
             values = [scores["accuracy"], secondary, scores["ece"], scores["nll"], scores["brier"]]
             markdown.append(f"| {result['run']} | {result['model']} | {head} | " +
@@ -82,6 +85,8 @@ def generate_report():
         # Duplicate invocations of the same seed do not count as repetitions.
         group = list({r["seed"]: r for r in group}.values())
         for head in group[0]["calibrated"]:
+            if head in MULTILABEL_HEADS:
+                continue
             values = [r["calibrated"][head]["accuracy"] for r in group]
             summary.append(f"{tex_escape(name)} & {head} & {len(group)} & " +
                            f"{np.mean(values):.4f} $\\pm$ {np.std(values, ddof=1):.4f} \\\\")

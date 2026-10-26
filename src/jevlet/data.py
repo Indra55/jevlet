@@ -11,7 +11,7 @@ from datasets import load_dataset
 from huggingface_hub import snapshot_download
 from sklearn.model_selection import train_test_split
 
-from .config import write_json
+from .config import MULTILABEL_HEADS, write_json
 
 TOKENS = ("[Q]", "[OPT]")
 SCORE_QUESTION = "How positive is this review?"
@@ -148,6 +148,7 @@ def sample_request(row, names, cfg, epoch=0, training=False, fixed_k=None, quest
 
 
 def requests_for(bundle, split, cfg, epoch=0, training=False, fixed_k=None, head=None):
+    from .multilabel import sample_multilabel_request
     views = cfg.get("eval", {}).get("validation_views", 1) if split == "validation" else 1
     if not 1 <= views <= 5:
         raise ValueError("validation_views must be between one and five")
@@ -155,8 +156,13 @@ def requests_for(bundle, split, cfg, epoch=0, training=False, fixed_k=None, head
     for view in range(views):
         variant = "random" if training and cfg.get("augment_questions", False) else view
         for row in bundle["splits"][split]:
-            request = sample_request(row, bundle["label_names"], cfg,
-                                     epoch if training else epoch + view, training, fixed_k, variant)
+            sampling_epoch = epoch if training else epoch + view
+            if row["domain"] in MULTILABEL_HEADS:
+                names = bundle.get(row["domain"] + "_names", bundle["label_names"])
+                request = sample_multilabel_request(row, names, cfg, sampling_epoch, fixed_k)
+            else:
+                request = sample_request(row, bundle["label_names"], cfg,
+                                         sampling_epoch, training, fixed_k, variant)
             if views > 1:
                 request["validation_view"] = view
             requests.append(request)
@@ -171,19 +177,28 @@ def validate_questions(questions):
         raise ValueError("Supply a list of one to three questions")
     ids = set()
     for q in questions:
-        if q.get("type") not in ("choice", "score", "yesno"):
-            raise ValueError("Question type must be choice, score, or yesno")
+        if q.get("type") not in ("choice", "score", "yesno") + MULTILABEL_HEADS:
+            raise ValueError("Unknown question type")
         if not isinstance(q.get("text"), str) or not q["text"].strip():
             raise ValueError("Each question needs nonempty text")
         if not isinstance(q.get("id"), str) or not q["id"] or q["id"] in ids:
             raise ValueError("Question IDs must be unique nonempty strings")
         ids.add(q["id"])
-        if q["type"] == "choice":
+        if q["type"] in ("choice",) + MULTILABEL_HEADS:
             opts = q.get("options")
             if not isinstance(opts, list) or not 2 <= len(opts) <= 10:
                 raise ValueError("Choice questions require two to ten options")
             if any(not isinstance(o, str) or not o.strip() for o in opts) or len(set(opts)) != len(opts):
                 raise ValueError("Options must be distinct nonempty strings")
+            if q["type"] in MULTILABEL_HEADS:
+                if "threshold" in q and (not isinstance(q["threshold"], (int, float)) or
+                                         not 0 < q["threshold"] < 1):
+                    raise ValueError("Multi-label threshold must be between zero and one, exclusively")
+                if "target" in q:
+                    target = q["target"]
+                    if (not isinstance(target, list) or len(target) != len(opts) or
+                            any(t not in (-1, 0, 1) for t in target) or all(t == -1 for t in target)):
+                        raise ValueError("Multi-label targets need one -1, 0, or 1 per option, with an observed label")
 
 
 def pack_request(tokenizer, request, max_length):
@@ -207,7 +222,7 @@ def pack_request(tokenizer, request, max_length):
             raise ValueError("Question has no tokens after removing reserved markers")
         ids.extend(question_ids)
         options = []
-        for option in question.get("options", []) if question["type"] == "choice" else []:
+        for option in question.get("options", []) if question["type"] in ("choice",) + MULTILABEL_HEADS else []:
             options.append(len(ids))
             ids.append(tokenizer.convert_tokens_to_ids("[OPT]"))
             option_ids = encode(option)

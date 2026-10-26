@@ -1,7 +1,7 @@
 **
 (paper.tex
 LaTeX2e <2021-11-15> patch level 1
-L3 programming layer <2022-02-24> (IEEEtran.cls
+L3 programming layer <2022-02-24> (local-xetex-fonts.tex) (IEEEtran.cls
 Document Class: IEEEtran 2015/08/26 V1.8b by Michael Shell
 -- See the "IEEEtran_HOWTO" manual for usage information.
 -- http://www.michaelshell.org/tex/ieeetran/
@@ -12,13 +12,6 @@ Document Class: IEEEtran 2015/08/26 V1.8b by Michael Shell
 \@IEEEtrantmpcountB=\count182
 \@IEEEtrantmpcountC=\count183
 \@IEEEtrantmptoksA=\toks16
-LaTeX Font Info:    Trying to load font information for TU+ptm on input line 50
-3.
-LaTeX Font Info:    No file TUptm.fd. on input line 503.
-
-LaTeX Font Warning: Font shape `TU/ptm/m/n' undefined
-(Font)              using `TU/lmr/m/n' instead on input line 503.
-
 -- Using 8.5in x 11in (letter) paper.
 -- Using DVI output.
 \@IEEEnormalsizeunitybaselineskip=\dimen141
@@ -26,18 +19,46 @@ LaTeX Font Warning: Font shape `TU/ptm/m/n' undefined
 \CLASSINFOnormalsizebaselineskip=\dimen142
 \CLASSINFOnormalsizeunitybaselineskip=\dimen143
 \IEEEnormaljot=\dimen144
-
-LaTeX Font Warning: Font shape `TU/ptm/bx/n' undefined
-(Font)              using `TU/ptm/m/n' instead on input line 1090.
-
-
-LaTeX Font Warning: Font shape `TU/ptm/m/it' undefined
-(Font)              using `TU/ptm/m/n' instead on input line 1090.
-
-
-LaTeX Font Warning: Font shape `TU/ptm/bx/it' undefined
-(Font)              using `TU/ptm/bx/n' instead on input line 1090.
-
+LaTeX Font Info:    Font shape `TU/ptm/bx/n' in size <5> not available
+(Font)              Font shape `TU/ptm/b/n' tried instead on input line 1090.
+LaTeX Font Info:    Font shape `TU/ptm/bx/it' in size <5> not available
+(Font)              Font shape `TU/ptm/b/it' tried instead on input line 1090.
+LaTeX Font Info:    Font shape `TU/ptm/bx/n' in size <7> not available
+(Font)              Font shape `TU/ptm/b/n' tried instead on input line 1090.
+LaTeX Font Info:    Font shape `TU/ptm/bx/it' in size <7> not available
+(Font)              Font shape `TU/ptm/b/it' tried instead on input line 1090.
+LaTeX Font Info:    Font shape `TU/ptm/bx/n' in size <8> not available
+(Font)              Font shape `TU/ptm/b/n' tried instead on input line 1090.
+LaTeX Font Info:    Font shape `TU/ptm/bx/it' in size <8> not available
+(Font)              Font shape `TU/ptm/b/it' tried instead on input line 1090.
+LaTeX Font Info:    Font shape `TU/ptm/bx/n' in size <9> not available
+(Font)              Font shape `TU/ptm/b/n' tried instead on input line 1090.
+LaTeX Font Info:    Font shape `TU/ptm/bx/it' in size <9> not available
+(Font)              Font shape `TU/ptm/b/it' tried instead on input line 1090.
+LaTeX Font Info:    Font shape `TU/ptm/bx/n' in size <10> not available
+(Font)              Font shape `TU/ptm/b/n' tried instead on input line 1090.
+LaTeX Font Info:    Font shape `TU/ptm/bx/it' in size <10> not available
+(Font)              Font shape `TU/ptm/b/it' tried instead on input line 1090.
+LaTeX Font Info:    Font shape `TU/ptm/bx/n' in size <11> not available
+(Font)              Font shape `TU/ptm/b/n' tried instead on input line 1090.
+LaTeX Font Info:    Font shape `TU/ptm/bx/it' in size <11> not available
+(Font)              Font shape `TU/ptm/b/it' tried instead on input line 1090.
+LaTeX Font Info:    Font shape `TU/ptm/bx/n' in size <12> not available
+(Font)              Font shape `TU/ptm/b/n' tried instead on input line 1090.
+LaTeX Font Info:    Font shape `TU/ptm/bx/it' in size <12> not available
+(Font)              Font shape `TU/ptm/b/it' tried instead on input line 1090.
+LaTeX Font Info:    Font shape `TU/ptm/bx/n' in size <17> not available
+(Font)              Font shape `TU/ptm/b/n' tried instead on input line 1090.
+LaTeX Font Info:    Font shape `TU/ptm/bx/it' in size <17> not available
+(Font)              Font shape `TU/ptm/b/it' tried instead on input line 1090.
+LaTeX Font Info:    Font shape `TU/ptm/bx/n' in size <20> not available
+(Font)              Font shape `TU/ptm/b/n' tried instead on input line 1090.
+LaTeX Font Info:    Font shape `TU/ptm/bx/it' in size <20> not available
+(Font)              Font shape `TU/ptm/b/it' tried instead on input line 1090.
+LaTeX Font Info:    Font shape `TU/ptm/bx/n' in size <24> not available
+(Font)              Font shape `TU/ptm/b/n' tried instead on input line 1090.
+LaTeX Font Info:    Font shape `TU/ptm/bx/it' in size <24> not available
+(Font)              Font shape `TU/ptm/b/it' tried instead on input line 1090.
 \IEEEquantizedlength=\dimen145
 \IEEEquantizedlengthdiff=\dimen146
 \IEEEquantizedtextheightdiff=\dimen147
@@ -196,22 +217,11 @@ Package: cite 2015/02/27  v 5.5
 ) (url.sty
 \Urlmuskip=\muskip17
 Package: url 2013/09/16  ver 3.4  Verb mode for urls, etc.
-) (tikz.sty (pgf.sty
-(pgfrcs.sty (pgfutil-common.tex
-\pgfutil@everybye=\toks22
-\pgfutil@tempdima=\dimen184
-\pgfutil@tempdimb=\dimen185
- (pgfutil-common-lists.tex)) (pgfutil-latex.def
-\pgfutil@abb=\box54
-) (pgfrcs.code.tex (pgf.revision.tex)
-Package: pgfrcs 2021/05/15 v3.1.9a (3.1.9a)
-))
-Package: pgf 2021/05/15 v3.1.9a (3.1.9a)
- (pgfcore.sty (graphicx.sty
+) (graphicx.sty
 Package: graphicx 2021/09/16 v1.2d Enhanced LaTeX Graphics (DPC,SPQR)
  (keyval.sty
 Package: keyval 2014/10/28 v1.15 key=value parser (DPC)
-\KV@toks@=\toks23
+\KV@toks@=\toks22
 )
 (graphics.sty
 Package: graphics 2021/03/04 v1.4d Standard LaTeX Graphics (DPC,SPQR)
@@ -224,9 +234,20 @@ Package graphics Info: Driver file: xetex.def on input line 107.
  (xetex.def
 File: xetex.def 2021/03/18 v5.0k Graphics/color driver for xetex
 ))
-\Gin@req@height=\dimen186
-\Gin@req@width=\dimen187
-) (pgfsys.sty
+\Gin@req@height=\dimen184
+\Gin@req@width=\dimen185
+) (tikz.sty (pgf.sty
+(pgfrcs.sty (pgfutil-common.tex
+\pgfutil@everybye=\toks23
+\pgfutil@tempdima=\dimen186
+\pgfutil@tempdimb=\dimen187
+ (pgfutil-common-lists.tex)) (pgfutil-latex.def
+\pgfutil@abb=\box54
+) (pgfrcs.code.tex (pgf.revision.tex)
+Package: pgfrcs 2021/05/15 v3.1.9a (3.1.9a)
+))
+Package: pgf 2021/05/15 v3.1.9a (3.1.9a)
+ (pgfcore.sty (pgfsys.sty
 (pgfsys.code.tex
 Package: pgfsys 2021/05/15 v3.1.9a (3.1.9a)
  (pgfkeys.code.tex
@@ -433,78 +454,23 @@ File: pgfmodulematrix.code.tex 2021/05/15 v3.1.9a (3.1.9a)
 \tikz@expandcount=\count299
  (tikzlibrarytopaths.code.tex
 File: tikzlibrarytopaths.code.tex 2021/05/15 v3.1.9a (3.1.9a)
-))) (pgfplots.sty
-(pgfplots.revision.tex)
-Package: pgfplots 2021/05/15 v1.18.1 Data Visualization (1.18.1)
- (pgfplots.code.tex (pgfplotscore.code.tex
-\t@pgfplots@toka=\toks35
-\t@pgfplots@tokb=\toks36
-\t@pgfplots@tokc=\toks37
-\pgfplots@tmpa=\dimen292
-\c@pgfplots@coordindex=\count300
-\c@pgfplots@scanlineindex=\count301
-
-(pgfplotssysgeneric.code.tex)) (pgfplotslibrary.code.tex)
-(pgfplotsoldpgfsupp_loader.code.tex (pgflibraryfpu.code.tex))
-(pgfplotsutil.code.tex (pgfplotsliststructure.code.tex)
-(pgfplotsliststructureext.code.tex) (pgfplotsarray.code.tex
-\c@pgfplotsarray@tmp=\count302
+)))
+(tikzlibrarypositioning.code.tex
+File: tikzlibrarypositioning.code.tex 2021/05/15 v3.1.9a (3.1.9a)
+) (pgflibraryarrows.meta.code.tex
+File: pgflibraryarrows.meta.code.tex 2021/05/15 v3.1.9a (3.1.9a)
+\pgfarrowinset=\dimen292
+\pgfarrowlength=\dimen293
+\pgfarrowwidth=\dimen294
+\pgfarrowlinewidth=\dimen295
 )
-(pgfplotsmatrix.code.tex) (pgfplotstableshared.code.tex
-\c@pgfplotstable@counta=\count303
-\t@pgfplotstable@a=\toks38
-)
-(pgfplotsdeque.code.tex) (pgfplotsbinary.code.tex (pgfplotsbinary.data.code.tex
-)) (pgfplotsutil.verb.code.tex) (pgflibrarypgfplots.surfshading.code.tex
-\c@pgfplotslibrarysurf@no=\count304
-
-(pgflibrarypgfplots.surfshading.pgfsys-xetex.def
-(pgflibrarypgfplots.surfshading.pgfsys-dvipdfmx.def
-\c@pgfplotslibrarysurf@streamlen=\count305
-))))
-(pgfplotscolormap.code.tex (pgfplotscolor.code.tex))
-(pgfplotsstackedplots.code.tex) (pgfplotsplothandlers.code.tex
-(pgfplotsmeshplothandler.code.tex (pgfplotsmeshplotimage.code.tex)))
-(pgfplots.scaling.code.tex) (pgfplotscoordprocessing.code.tex)
-(pgfplots.errorbars.code.tex) (pgfplots.markers.code.tex)
-(pgfplotsticks.code.tex) (pgfplots.paths.code.tex)
-(tikzlibrarydecorations.code.tex (pgfmoduledecorations.code.tex
-\pgfdecoratedcompleteddistance=\dimen293
-\pgfdecoratedremainingdistance=\dimen294
-\pgfdecoratedinputsegmentcompleteddistance=\dimen295
-\pgfdecoratedinputsegmentremainingdistance=\dimen296
-\pgf@decorate@distancetomove=\dimen297
-\pgf@decorate@repeatstate=\count306
-\pgfdecorationsegmentamplitude=\dimen298
-\pgfdecorationsegmentlength=\dimen299
-)
-\tikz@lib@dec@box=\box65
-)
-(tikzlibrarydecorations.pathmorphing.code.tex
-(pgflibrarydecorations.pathmorphing.code.tex))
-(tikzlibrarydecorations.pathreplacing.code.tex
-(pgflibrarydecorations.pathreplacing.code.tex))
-(tikzlibrarypgfplots.contourlua.code.tex)
-\pgfplots@numplots=\count307
-\pgfplots@xmin@reg=\dimen300
-\pgfplots@xmax@reg=\dimen301
-\pgfplots@ymin@reg=\dimen302
-\pgfplots@ymax@reg=\dimen303
-\pgfplots@zmin@reg=\dimen304
-\pgfplots@zmax@reg=\dimen305
-) (tikzlibraryplotmarks.code.tex
-File: tikzlibraryplotmarks.code.tex 2021/05/15 v3.1.9a (3.1.9a)
-
-(pgflibraryplotmarks.code.tex
-File: pgflibraryplotmarks.code.tex 2021/05/15 v3.1.9a (3.1.9a)
-))) (hyperref.sty
+(hyperref.sty
 Package: hyperref 2022-02-21 v7.00n Hypertext links for LaTeX
  (ltxcmds.sty
 Package: ltxcmds 2020-05-10 v1.25 LaTeX kernel commands for general use (HO)
 ) (iftex.sty
 Package: iftex 2022/02/03 v1.0f TeX engine tests
-)
-(pdftexcmds.sty
+) (pdftexcmds.sty
 Package: pdftexcmds 2020-06-27 v0.33 Utility functions of pdfTeX for LuaTeX (HO
 )
  (infwarerr.sty
@@ -513,34 +479,35 @@ Package: infwarerr 2019/12/03 v1.5 Providing info/warning/error messages (HO)
 Package pdftexcmds Info: \pdf@primitive is available.
 Package pdftexcmds Info: \pdf@ifprimitive is available.
 Package pdftexcmds Info: \pdfdraftmode not found.
-) (kvsetkeys.sty
+)
+(kvsetkeys.sty
 Package: kvsetkeys 2019/12/15 v1.18 Key value parser (HO)
 ) (kvdefinekeys.sty
 Package: kvdefinekeys 2019-12-19 v1.6 Define keys (HO)
-)
-(pdfescape.sty
+) (pdfescape.sty
 Package: pdfescape 2019/12/09 v1.15 Implements pdfTeX's escape features (HO)
 ) (hycolor.sty
 Package: hycolor 2020-01-27 v1.10 Color options for hyperref/bookmark (HO)
-) (letltxmacro.sty
+)
+(letltxmacro.sty
 Package: letltxmacro 2019/12/03 v1.6 Let assignment for LaTeX macros (HO)
 ) (auxhook.sty
 Package: auxhook 2019-12-17 v1.6 Hooks for auxiliary files (HO)
 ) (kvoptions.sty
 Package: kvoptions 2020-10-07 v3.14 Key value format for package options (HO)
 )
-\@linkdim=\dimen306
-\Hy@linkcounter=\count308
-\Hy@pagecounter=\count309
-
-(pd1enc.def
+\@linkdim=\dimen296
+\Hy@linkcounter=\count300
+\Hy@pagecounter=\count301
+ (pd1enc.def
 File: pd1enc.def 2022-02-21 v7.00n Hyperref: PDFDocEncoding definition (HO)
 ) (intcalc.sty
 Package: intcalc 2019/12/15 v1.3 Expandable calculations with integers (HO)
-) (etexcmds.sty
+)
+(etexcmds.sty
 Package: etexcmds 2019/12/15 v1.7 Avoid name clashes with e-TeX commands (HO)
 )
-\Hy@SavedSpaceFactor=\count310
+\Hy@SavedSpaceFactor=\count302
  (puenc.def
 File: puenc.def 2022-02-21 v7.00n Hyperref: PDF Unicode definition (HO)
 )
@@ -551,19 +518,18 @@ Package hyperref Info: Plain pages OFF on input line 4152.
 Package hyperref Info: Backreferencing OFF on input line 4157.
 Package hyperref Info: Implicit mode ON; LaTeX internals redefined.
 Package hyperref Info: Bookmarks ON on input line 4390.
-\c@Hy@tempcnt=\count311
+\c@Hy@tempcnt=\count303
 LaTeX Info: Redefining \url on input line 4749.
-\XeTeXLinkMargin=\dimen307
+\XeTeXLinkMargin=\dimen297
  (bitset.sty
 Package: bitset 2019/12/09 v1.3 Handle bit-vector datatype (HO)
-
-(bigintcalc.sty
+ (bigintcalc.sty
 Package: bigintcalc 2019/12/15 v1.5 Expandable calculations on big integers (HO
 )
 ))
-\Fld@menulength=\count312
-\Field@Width=\dimen308
-\Fld@charsize=\dimen309
+\Fld@menulength=\count304
+\Field@Width=\dimen298
+\Fld@charsize=\dimen299
 Package hyperref Info: Hyper figures OFF on input line 6027.
 Package hyperref Info: Link nesting OFF on input line 6032.
 Package hyperref Info: Hyper index ON on input line 6035.
@@ -577,161 +543,78 @@ LaTeX Info: Redefining \pageref on input line 6101.
 Package: atbegshi-ltx 2021/01/10 v1.0c Emulation of the original atbegshi
 package with kernel methods
 )
-\Hy@abspage=\count313
-\c@Item=\count314
-\c@Hfootnote=\count315
+\Hy@abspage=\count305
+\c@Item=\count306
+\c@Hfootnote=\count307
 )
 Package hyperref Info: Driver (autodetected): hxetex.
- (hxetex.def
+
+(hxetex.def
 File: hxetex.def 2022-02-21 v7.00n Hyperref driver for XeTeX
  (stringenc.sty
 Package: stringenc 2019/11/29 v1.12 Convert strings between diff. encodings (HO
 )
 )
-\pdfm@box=\box66
-\c@Hy@AnnotLevel=\count316
-\HyField@AnnotCount=\count317
-\Fld@listcount=\count318
-\c@bookmark@seq@number=\count319
-
-(rerunfilecheck.sty
+\pdfm@box=\box65
+\c@Hy@AnnotLevel=\count308
+\HyField@AnnotCount=\count309
+\Fld@listcount=\count310
+\c@bookmark@seq@number=\count311
+ (rerunfilecheck.sty
 Package: rerunfilecheck 2019/12/05 v1.9 Rerun checks for auxiliary files (HO)
  (atveryend-ltx.sty
 Package: atveryend-ltx 2020/08/19 v1.0a Emulation of the original atveryend pac
 kage
 with kernel methods
-) (uniquecounter.sty
+)
+(uniquecounter.sty
 Package: uniquecounter 2019/12/15 v1.4 Provide unlimited unique counter (HO)
 )
 Package uniquecounter Info: New unique counter `rerunfilecheck' on input line 2
 86.
 )
 \Hy@SectionHShift=\skip53
-)
-(l3backend-xetex.def
+) (l3backend-xetex.def
 File: l3backend-xetex.def 2022-02-07 L3 backend support: XeTeX
-\c__kernel_sys_dvipdfmx_version_int=\count320
-\l__color_backend_stack_int=\count321
-\g__color_backend_stack_int=\count322
-\g__graphics_track_int=\count323
-\l__pdf_internal_box=\box67
-\g__pdf_backend_object_int=\count324
-\g__pdf_backend_annotation_int=\count325
-\g__pdf_backend_link_int=\count326
+\c__kernel_sys_dvipdfmx_version_int=\count312
+\l__color_backend_stack_int=\count313
+\g__color_backend_stack_int=\count314
+\g__graphics_track_int=\count315
+\l__pdf_internal_box=\box66
+\g__pdf_backend_object_int=\count316
+\g__pdf_backend_annotation_int=\count317
+\g__pdf_backend_link_int=\count318
 ) (paper.aux)
 \openout1 = `paper.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 37.
-LaTeX Font Info:    ... okay on input line 37.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 37.
-LaTeX Font Info:    ... okay on input line 37.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 37.
-LaTeX Font Info:    ... okay on input line 37.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 37.
-LaTeX Font Info:    ... okay on input line 37.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 37.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 39.
+LaTeX Font Info:    ... okay on input line 39.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 39.
+LaTeX Font Info:    ... okay on input line 39.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 39.
+LaTeX Font Info:    ... okay on input line 39.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 39.
+LaTeX Font Info:    ... okay on input line 39.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 39.
 LaTeX Font Info:    Trying to load font information for TS1+cmr on input line 3
-7.
+9.
  (ts1cmr.fd
 File: ts1cmr.fd 2019/12/16 v2.5j Standard LaTeX font definitions
 )
-LaTeX Font Info:    ... okay on input line 37.
-LaTeX Font Info:    Checking defaults for TU/lmr/m/n on input line 37.
-LaTeX Font Info:    ... okay on input line 37.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 37.
-LaTeX Font Info:    ... okay on input line 37.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 37.
-LaTeX Font Info:    ... okay on input line 37.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 37.
-LaTeX Font Info:    ... okay on input line 37.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 37.
-LaTeX Font Info:    ... okay on input line 37.
-
-
-LaTeX Font Warning: Font shape `TU/ptm/b/n' undefined
-(Font)              using `TU/ptm/bx/n' instead on input line 37.
-
-
-LaTeX Font Warning: Font shape `TU/ptm/b/it' undefined
-(Font)              using `TU/ptm/bx/it' instead on input line 37.
-
-
-LaTeX Font Warning: Font shape `TU/ptm/b/n' undefined
-(Font)              using `TU/ptm/bx/n' instead on input line 37.
-
-
-LaTeX Font Warning: Font shape `TU/ptm/b/it' undefined
-(Font)              using `TU/ptm/bx/it' instead on input line 37.
-
-
-LaTeX Font Warning: Font shape `TU/ptm/b/n' undefined
-(Font)              using `TU/ptm/bx/n' instead on input line 37.
-
-
-LaTeX Font Warning: Font shape `TU/ptm/b/it' undefined
-(Font)              using `TU/ptm/bx/it' instead on input line 37.
-
-
-LaTeX Font Warning: Font shape `TU/ptm/b/n' undefined
-(Font)              using `TU/ptm/bx/n' instead on input line 37.
-
-
-LaTeX Font Warning: Font shape `TU/ptm/b/it' undefined
-(Font)              using `TU/ptm/bx/it' instead on input line 37.
-
-
-LaTeX Font Warning: Font shape `TU/ptm/b/n' undefined
-(Font)              using `TU/ptm/bx/n' instead on input line 37.
-
-
-LaTeX Font Warning: Font shape `TU/ptm/b/it' undefined
-(Font)              using `TU/ptm/bx/it' instead on input line 37.
-
-
-LaTeX Font Warning: Font shape `TU/ptm/b/n' undefined
-(Font)              using `TU/ptm/bx/n' instead on input line 37.
-
-
-LaTeX Font Warning: Font shape `TU/ptm/b/it' undefined
-(Font)              using `TU/ptm/bx/it' instead on input line 37.
-
-
-LaTeX Font Warning: Font shape `TU/ptm/b/n' undefined
-(Font)              using `TU/ptm/bx/n' instead on input line 37.
-
-
-LaTeX Font Warning: Font shape `TU/ptm/b/it' undefined
-(Font)              using `TU/ptm/bx/it' instead on input line 37.
-
-
-LaTeX Font Warning: Font shape `TU/ptm/b/n' undefined
-(Font)              using `TU/ptm/bx/n' instead on input line 37.
-
-
-LaTeX Font Warning: Font shape `TU/ptm/b/it' undefined
-(Font)              using `TU/ptm/bx/it' instead on input line 37.
-
-
-LaTeX Font Warning: Font shape `TU/ptm/b/n' undefined
-(Font)              using `TU/ptm/bx/n' instead on input line 37.
-
-
-LaTeX Font Warning: Font shape `TU/ptm/b/it' undefined
-(Font)              using `TU/ptm/bx/it' instead on input line 37.
-
-
-LaTeX Font Warning: Font shape `TU/ptm/b/n' undefined
-(Font)              using `TU/ptm/bx/n' instead on input line 37.
-
-
-LaTeX Font Warning: Font shape `TU/ptm/b/it' undefined
-(Font)              using `TU/ptm/bx/it' instead on input line 37.
+LaTeX Font Info:    ... okay on input line 39.
+LaTeX Font Info:    Checking defaults for TU/lmr/m/n on input line 39.
+LaTeX Font Info:    ... okay on input line 39.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 39.
+LaTeX Font Info:    ... okay on input line 39.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 39.
+LaTeX Font Info:    ... okay on input line 39.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 39.
+LaTeX Font Info:    ... okay on input line 39.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 39.
+LaTeX Font Info:    ... okay on input line 39.
 
 -- Lines per column: 56 (exact).
-Package pgfplots notification 'compat/show suggested version=true': document ha
-s been generated with the most recent feature set (\pgfplotsset{compat=1.18}).
-
-Package hyperref Info: Link coloring OFF on input line 37.
+Package hyperref Info: Link coloring OFF on input line 39.
 (nameref.sty
 Package: nameref 2021-04-02 v2.47 Cross-referencing by name of section
  (refcount.sty
@@ -739,106 +622,82 @@ Package: refcount 2019/12/15 v3.6 Data extraction from label references (HO)
 ) (gettitlestring.sty
 Package: gettitlestring 2019/12/15 v1.6 Cleanup title references (HO)
 )
-\c@section@level=\count327
+\c@section@level=\count319
 )
-LaTeX Info: Redefining \ref on input line 37.
-LaTeX Info: Redefining \pageref on input line 37.
-LaTeX Info: Redefining \nameref on input line 37.
+LaTeX Info: Redefining \ref on input line 39.
+LaTeX Info: Redefining \pageref on input line 39.
+LaTeX Info: Redefining \nameref on input line 39.
  (paper.out) (paper.out)
 \@outlinefile=\write4
 \openout4 = `paper.out'.
 
+LaTeX Font Info:    Font shape `TU/ptm/m/sc' in size <10> not available
+(Font)              Font shape `TU/ptm/m/n' tried instead on input line 49.
+
+[1
 
 
-LaTeX Font Warning: Font shape `TU/ptm/b/n' undefined
-(Font)              using `TU/ptm/bx/n' instead on input line 39.
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 39--42
-[]\TU/ptm/bx/it/9 Abstract—Many text-processing applications need a
- []
-
-
-LaTeX Font Warning: Font shape `TU/ptm/b/n' undefined
-(Font)              using `TU/ptm/bx/n' instead on input line 43.
-
-
-LaTeX Font Warning: Font shape `TU/ptm/m/sc' undefined
-(Font)              using `TU/ptm/m/n' instead on input line 49.
-
+]
 LaTeX Font Info:    Trying to load font information for OT1+ztmcm on input line
- 63.
-(ot1ztmcm.fd
+ 81.
+ (ot1ztmcm.fd
 File: ot1ztmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OT1/ztmcm.
 )
 LaTeX Font Info:    Trying to load font information for OML+ztmcm on input line
- 63.
+ 81.
  (omlztmcm.fd
 File: omlztmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OML/ztmcm.
 )
 LaTeX Font Info:    Trying to load font information for OMS+ztmcm on input line
- 63.
+ 81.
  (omsztmcm.fd
 File: omsztmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OMS/ztmcm.
 )
 LaTeX Font Info:    Trying to load font information for OMX+ztmcm on input line
- 63.
+ 81.
  (omxztmcm.fd
 File: omxztmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OMX/ztmcm.
 )
-LaTeX Font Info:    Trying to load font information for OT1+ptm on input line 6
-3.
+LaTeX Font Info:    Trying to load font information for OT1+ptm on input line 8
+1.
  (ot1ptm.fd
 File: ot1ptm.fd 2001/06/04 font definitions for OT1/ptm.
 )
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <10> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 63.
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 81.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <7.4> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 63.
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 81.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <6> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 63.
- [1
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 81.
 
+[2]
 
-]
-LaTeX Font Info:    Trying to load font information for TU+pcr on input line 67
-.
-LaTeX Font Info:    No file TUpcr.fd. on input line 67.
+Package amsmath Warning: Foreign command \over;
+(amsmath)                \frac or \genfrac should be used instead
+(amsmath)                 on input line 139.
 
-
-LaTeX Font Warning: Font shape `TU/pcr/m/n' undefined
-(Font)              using `TU/lmr/m/n' instead on input line 67.
-
+[3]
+LaTeX Font Info:    Font shape `TU/ptm/m/sc' in size <8> not available
+(Font)              Font shape `TU/ptm/m/n' tried instead on input line 157.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <8> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 123.
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 160.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <5> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 123.
-[2] [3]
-LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <7> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 212.
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 160.
  [4]
-LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <9> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 235.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <7> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 211.
 
-Underfull \hbox (badness 5771) in paragraph at lines 273--274
-[]\TU/ptm/m/sc/8 N. Mukkunnoth and Convai Innovations, “Laya: Non-
- []
-
-[5]
-Underfull \hbox (badness 3579) in paragraph at lines 277--278
-\TU/ptm/m/sc/8 I. Vulić, “Efficient intent detection with dual sentence
+Underfull \hbox (badness 1874) in paragraph at lines 250--251
+\TU/ptm/m/n/10 revision \TU/pcr/m/n/10 38ed101 \TU/ptm/m/n/10 evaluated 3,079 c
+hoice, 2,210 senti-
  []
 
 
-Underfull \hbox (badness 1436) in paragraph at lines 277--278
-\TU/ptm/m/sc/8 encoders,” in Proc. 2nd Workshop on Natural Language
+Underfull \hbox (badness 1888) in paragraph at lines 268--269
+[]\TU/ptm/m/n/10 In the archived experiment, categorical Jevlet reaches
  []
 
-
-Underfull \hbox (badness 2376) in paragraph at lines 277--278
-\TU/ptm/m/sc/8 Processing for Conversational AI, 2020, pp. 38–45, doi:
- []
-
+[5] [6]
 
 ** Conference Paper **
 Before submitting the final camera ready copy, remember to:
@@ -850,13 +709,8 @@ Before submitting the final camera ready copy, remember to:
  uses only Type 1 fonts and that every step in the generation
  process uses the appropriate paper size.
 
-[6
-
-] (paper.aux)
-
-LaTeX Font Warning: Some font shapes were not available, defaults substituted.
-
+[7] (paper.aux)
 Package rerunfilecheck Info: File `paper.out' has not changed.
-(rerunfilecheck)             Checksum: 7C4CE6A538504E5B354FEFCFB210E537;4092.
+(rerunfilecheck)             Checksum: D86F1993A96B17C43CC1904A98FBE934;5449.
  )
-Output written on paper.xdv (6 pages, 293812 bytes).
+Output written on paper.xdv (7 pages, 377264 bytes).

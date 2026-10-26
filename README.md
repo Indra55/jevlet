@@ -1,13 +1,125 @@
 # Jevlet
 
-A small encoder that answers typed questions about text: choose an option, rate
-sentiment from 1 to 5, or answer yes/no. Up to three questions share one sequence
+A small encoder that answers typed questions about text: choose an option, select
+multiple labels, rate sentiment from 1 to 5, or answer yes/no. Up to three questions share one sequence
 and one DistilBERT encoder pass. Outputs are probabilities, not generated text.
 
 Inspired by [TypeSafe's Jev](https://typesafe.ai/blog/introducing-system-one-models-and-jev),
 [OpenAI Decisions](https://developers.openai.com/api/reference/resources/decisions/methods/create),
 and [Laya](https://github.com/NandhaKishorM/laya). This project trains on labeled
 public data; it does not reproduce those systems' capabilities or training.
+
+## Multi-label banking
+
+The combined checkpoint also selects **multiple banking intent components** from
+real NLU++ annotations. It has a shared encoder with separate banking and emotion
+multi-label heads, each with its own calibration and selection threshold.
+
+```sh
+.venv/bin/python -m jevlet.cli multilabel --nlupp --run multilabel-banking
+make demo
+```
+
+Open **http://127.0.0.1:8000/cases/banking_multi**. NLU++ uses 48 modular actions,
+objects, and states, distinct from the 77 Banking77 choice classes. The completed
+run achieved **86.5% candidate micro-F1** on 204 held-out messages, versus **81.3%**
+for TF-IDF logistic, on one fixed source-fold split with 2–10 supplied candidates.
+See [the banking guide](docs/BANKING_MULTILABEL.md) and
+[measured results](docs/BANKING_MULTILABEL_RESULTS.md).
+
+## Multi-label emotion selection
+
+Jevlet now supports **zero, one, or several emotion labels per text**, using real
+human annotations from GoEmotions and a dedicated sigmoid option head. Training,
+calibration, validation-based threshold selection, held-out set metrics, and a
+TF-IDF logistic baseline are included. The completed CPU run reached **70.4%
+candidate micro-F1** on 768 held-out texts, versus **60.9%** for the baseline;
+see [measured results and live example](docs/MULTILABEL_RESULTS.md).
+
+```sh
+# Train a new multi-label checkpoint from the existing CPU checkpoint:
+.venv/bin/python -m jevlet.cli multilabel --go-emotions --run multilabel-emotions
+# Launch the resulting checkpoint:
+make demo
+```
+
+Open **http://127.0.0.1:8000/cases/emotions**. Choose 2–10 candidate emotions and
+inspect independent probabilities; the threshold slider updates the selected set
+without another model call. The checkpoint includes the original task heads.
+Existing checkpoints remain loadable with their original behavior.
+
+See [the multi-label guide](docs/MULTILABEL.md) for reproducible data splits,
+measured artifacts, API examples, limitations, and verification. These are
+candidate-based emotion predictions, not a multi-intent banking benchmark.
+
+## Explore the local dashboard
+
+After training, launch **Jevlet Lab**, a custom browser dashboard with five live
+case studies. It loads your checkpoint once and runs real, calibrated inference
+on CPU. It does not retrain, call a hosted API, or save submitted messages.
+
+```sh
+make setup-demo                # add the web dependencies to your existing .venv
+make demo                      # defaults to checkpoints/multilabel-banking, CPU, port 8000
+```
+
+Open **http://127.0.0.1:8000**. Each case includes editable examples, a probability
+display, usage instructions, an explanation, a Python integration snippet, and
+evaluation notes drawn from the matching full results file when available.
+
+| Case study | What to try |
+| --- | --- |
+| Multiple banking intents | Select all applicable NLU++ banking components, with independent probabilities and a threshold. |
+| Multiple emotions | Select several emotion labels from GoEmotions; inspect independent probabilities and adjust the selection threshold. |
+| Banking support | Select 2–10 Banking77 intents and up to two topic checks. All questions share one encoder pass. |
+| Review sentiment | Score a short English movie review on the fixed SST-5 five-level rubric; inspect the expected score and class distribution. |
+| Confidence routing | Preview a support queue or human review using the banking choice confidence. Move the threshold without rerunning the model. |
+
+The routing rule is an application policy demonstration, not an additional
+learned capability; it does not send tickets or take financial actions. The 90%
+default is illustrative. Choice confidence is relative to the supplied candidates,
+and the true intent must be included for a valid candidate-based test. Sentiment
+is the weaker head; the evaluation notes show its measured limitations.
+
+To select another complete checkpoint or port:
+
+```sh
+make demo CHECKPOINT=checkpoints/friend-full PORT=8001
+# Or, directly (also works without Make):
+.venv/bin/python -m jevlet.cli serve --checkpoint checkpoints/cpu-full --port 8000
+```
+
+Windows PowerShell, using an already-created environment and trained checkpoint:
+
+```powershell
+uv pip install --python .venv\Scripts\python.exe -e ".[demo,demo-test]"
+.\.venv\Scripts\python.exe -m jevlet.cli serve --checkpoint checkpoints/full
+```
+
+The server binds to `127.0.0.1` by default. Interactive API documentation is at
+`/docs`: `GET /api/info` reports the loaded model and label catalogue, and
+`POST /api/predict` accepts a `case` (`banking`, `reviews`, or `routing`), `text`,
+and (for banking/routing) `options` and optional `checks`. Questions are built
+from the trained rubrics. Unknown intents and invalid candidate counts are
+rejected. Oversized context is truncated with a visible notice. A missing or
+uncalibrated checkpoint fails at startup; there is no synthetic-response fallback.
+
+Dashboard contract tests run with `make test` after `make setup-demo`. They are
+skipped when the optional web dependencies are absent; the core training project
+does not require a web server. Static assets ship with the Python package, with
+no frontend build step, external fonts, or CDN dependencies.
+
+An optional live browser check covers the real model path, desktop/mobile pages,
+threshold changes, truncation, and visible error recovery. With the server running:
+
+```sh
+uv pip install --python .venv/bin/python playwright
+PLAYWRIGHT_BROWSERS_PATH=.cache/ms-playwright .venv/bin/python -m playwright install chromium
+PLAYWRIGHT_BROWSERS_PATH=.cache/ms-playwright .venv/bin/python scripts/check_dashboard.py
+```
+
+This stores screenshots and actual response JSON in `.cache/dashboard-checks/`.
+Browser tooling is not needed to run the dashboard.
 
 ## Setup and CPU smoke check
 
@@ -34,6 +146,27 @@ make setup TORCH_BACKEND=auto
 make train DEVICE=cuda
 make eval DEVICE=cuda
 ```
+
+To train, calibrate, evaluate, and update reports automatically in one command:
+`.venv/bin/python -m jevlet.cli run --run cpu-full --device cpu`.
+The run writes `checkpoints/cpu-full/progress.json`, `run_status.json`, and the
+usual checkpoint/results artifacts. Progress estimates exclude validation,
+calibration, and evaluation and may change as the CPU's speed changes.
+
+New runs show live training, validation, calibration, and evaluation progress
+bars with batch counts, loss, speed, and ETA. To monitor a run that was started
+before the progress bars were added, open another terminal and run:
+
+```sh
+.venv/bin/python -m jevlet.cli watch --run cpu-full
+```
+
+This reads the existing progress files and does not restart training. Ctrl+C
+in the monitor stops only the monitor. Its ETA excludes validation, calibration,
+and evaluation; the JSON progress file updates every 25 training batches.
+Terminal output changes apply to newly started processes. Training currently
+starts from pretrained weights when invoked again, so restarting a running job
+does not resume its previous batch or saved epoch.
 
 `TORCH_BACKEND=auto` asks uv to select PyTorch for the detected hardware.
 Install the appropriate NVIDIA driver first. Check CUDA with
@@ -267,6 +400,9 @@ and AUROC to yes/no. **Smoke rows are pipeline checks only.**
 
 | Run | Model | Head | Accuracy | F1 / MAE / AUROC | ECE | NLL | Brier |
 |---|---|---|---:|---:|---:|---:|---:|
+| cpu-full | jevlet | choice | 0.9627 | 0.9625 | 0.0062 | 0.1092 | 0.0546 |
+| cpu-full | jevlet | score | 0.3624 | 0.8462 | 0.1891 | 1.3977 | 0.7423 |
+| cpu-full | jevlet | yesno | 0.9768 | 0.9962 | 0.0048 | 0.0758 | 0.0383 |
 | full | jevlet | choice | 0.9701 | 0.9700 | 0.0063 | 0.0923 | 0.0459 |
 | full | jevlet | score | 0.3520 | 0.8593 | 0.2122 | 1.4426 | 0.7502 |
 | full | jevlet | yesno | 0.9799 | 0.9969 | 0.0089 | 0.0686 | 0.0333 |
@@ -294,9 +430,9 @@ and AUROC to yes/no. **Smoke rows are pipeline checks only.**
 | refinement | jevlet | choice | 0.9597 | 0.9597 | 0.0073 | 0.1198 | 0.0614 |
 | refinement | jevlet | score | 0.5172 | 0.5674 | 0.0344 | 1.1039 | 0.5997 |
 | refinement | jevlet | yesno | 0.9708 | 0.9937 | 0.0063 | 0.0924 | 0.0473 |
-| smoke | jevlet | choice | 0.1667 | 0.0260 | 0.3061 | 0.7614 | 0.5284 |
-| smoke | jevlet | score | 0.0000 | 1.5000 | 0.2521 | 1.6476 | 0.8188 |
-| smoke | jevlet | yesno | 0.5000 | 0.4028 | 0.0034 | 0.6932 | 0.5001 |
+| smoke | jevlet | choice | 0.2500 | 0.0303 | 0.2782 | 0.7614 | 0.5285 |
+| smoke | jevlet | score | 0.3333 | 1.6667 | 0.0897 | 1.6077 | 0.7994 |
+| smoke | jevlet | yesno | 0.4167 | 0.5347 | 0.0835 | 0.6932 | 0.5000 |
 
 <!-- RESULTS:END -->
 

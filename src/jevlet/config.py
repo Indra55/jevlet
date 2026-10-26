@@ -13,6 +13,7 @@ import yaml
 from . import ROOT
 
 HEADS = ("choice", "score", "yesno")
+MULTILABEL_HEADS = ("multilabel", "banking_multilabel")
 
 
 def merge(base, override):

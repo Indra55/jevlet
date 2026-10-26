@@ -11,10 +11,18 @@ dependencies = [
   "torch>=2.3,<3", "transformers>=4.48,<5", "datasets>=3,<5",
   "scikit-learn>=1.4,<2", "matplotlib>=3.8,<4", "numpy>=1.26,<3",
   "PyYAML>=6,<7", "safetensors>=0.4", "sentencepiece>=0.2", "pytest>=8,<10",
+  "tqdm>=4.66,<5",
 ]
 
 [project.scripts]
 jevlet = "jevlet.cli:main"
+
+[project.optional-dependencies]
+demo = ["fastapi>=0.115,<1", "uvicorn>=0.30,<1"]
+demo-test = ["httpx>=0.27,<1"]
+
+[tool.setuptools.package-data]
+jevlet = ["web/*.html", "web/*.css", "web/*.js"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
